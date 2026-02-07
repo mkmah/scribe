@@ -10,7 +10,7 @@ defmodule SocialScribeWeb.ClipboardButtonComponent do
       type="button"
       phx-click="copy"
       phx-value-text={@text}
-      class="inline-flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+      class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-[#232323] border border-gray-200 dark:border-[#2e2e2e] rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-[#1c1c1c] focus:ring-brand-500 transition-colors duration-150"
     >
       <div class="relative size-4 mb-2">
         <.icon

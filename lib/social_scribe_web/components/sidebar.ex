@@ -1,24 +1,17 @@
 defmodule SocialScribeWeb.Sidebar do
   use SocialScribeWeb, :html
 
-  @doc """
-  Renders a sidebar menu with active state highlighting.
-
-  ## Examples
-
-      <.sidebar current_path={~p"/protocols"} />
-  """
-  attr :base_path, :string, required: true, doc: "the base path to determine active state"
-  attr :current_path, :string, required: true, doc: "the current path to determine active state"
-  attr :links, :list, required: true, doc: "the list of links to display in the sidebar"
+  attr :base_path, :string, required: true
+  attr :current_path, :string, required: true
+  attr :links, :list, required: true
 
   slot :widget
 
   def sidebar(assigns) do
     ~H"""
-    <div class="w-[212px] sticky bg-white text-black flex flex-col">
-      <nav class="flex-1 px-2 mt-12">
-        <ul class="space-y-1">
+    <aside class="hidden md:flex w-52 flex-col bg-white dark:bg-[#1c1c1c] border-r border-gray-200 dark:border-[#2e2e2e] sticky top-12 h-[calc(100vh-3rem)]">
+      <nav class="flex-1 px-3 py-5">
+        <ul class="space-y-0.5">
           <li :for={{label, icon, path} <- @links}>
             <.sidebar_link
               base_path={@base_path}
@@ -35,17 +28,10 @@ defmodule SocialScribeWeb.Sidebar do
       <div :for={widget <- @widget}>
         {render_slot(widget)}
       </div>
-    </div>
+    </aside>
     """
   end
 
-  @doc """
-  Renders a sidebar navigation link with the appropriate styling based on active state.
-
-  ## Examples
-
-      <.sidebar_link href="/dashboard" icon="home" label="Dashboard" current_path={@current_path} path="/dashboard" />
-  """
   attr :href, :string, required: true
   attr :icon, :string, required: true
   attr :label, :string, required: true
@@ -67,12 +53,19 @@ defmodule SocialScribeWeb.Sidebar do
     <.link
       href={@href}
       class={[
-        "flex items-center gap-3 px-2 py-2 text-sm rounded border-b border-indigo-600",
-        @active && "bg-indigo-600 text-white",
-        !@active && "text-gray-600 hover:bg-gray-100"
+        "flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-all duration-100",
+        @active && "bg-brand-500/10 dark:bg-brand-500/15 text-brand-700 dark:text-brand-400",
+        !@active && "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:text-gray-900 dark:hover:text-gray-200"
       ]}
     >
-      <.icon name={@icon} class="size-5" />
+      <.icon
+        name={@icon}
+        class={
+          if @active,
+            do: "size-4 flex-shrink-0 text-brand-600 dark:text-brand-400",
+            else: "size-4 flex-shrink-0 text-gray-400 dark:text-gray-500"
+        }
+      />
       {@label}
     </.link>
     """

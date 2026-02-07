@@ -35,7 +35,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponent do
               type="button"
               phx-click={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
               phx-disable-with="Cancelling..."
-              class="bg-slate-100 text-slate-700 leading-none py-2 px-4 rounded-md"
+              class="bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 leading-none py-2 px-3 rounded-md text-sm hover:bg-gray-200 dark:hover:bg-[#2e2e2e] transition-colors"
             >
               Cancel
             </button>

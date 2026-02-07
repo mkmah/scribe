@@ -273,27 +273,37 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       |> assign(:has_transcript, has_transcript)
 
     ~H"""
-    <div class="bg-white shadow-xl rounded-lg p-6 md:p-8">
-      <h2 class="text-2xl font-semibold mb-4 text-slate-700">
-        Meeting Transcript
-      </h2>
-      <div class="prose prose-sm sm:prose max-w-none h-96 overflow-y-auto pr-2">
+    <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
+        <.icon name="hero-chat-bubble-bottom-center-text" class="h-4 w-4 text-gray-400" />
+        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Transcript</h2>
+      </div>
+      <div class="p-5 h-96 overflow-y-auto scrollbar-thin">
         <%= if @has_transcript do %>
-          <div :for={segment <- @meeting_transcript.content["data"]} class="mb-3">
-            <p>
-              <span class="font-semibold text-indigo-600">
-                {segment["speaker"] || "Unknown Speaker"}:
-              </span>
-              {Enum.map_join(segment["words"] || [], " ", & &1["text"])}
-            </p>
+          <div class="space-y-3">
+            <div :for={segment <- @meeting_transcript.content["data"]} class="flex gap-3">
+              <div class="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center mt-0.5">
+                <span class="text-[9px] font-bold text-brand-700 dark:text-brand-400">
+                  {String.at(segment["speaker"] || "?", 0) |> String.upcase()}
+                </span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-brand-600 dark:text-brand-400 mb-0.5">
+                  {segment["speaker"] || "Unknown Speaker"}
+                </p>
+                <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {Enum.map_join(segment["words"] || [], " ", & &1["text"])}
+                </p>
+              </div>
+            </div>
           </div>
         <% else %>
-          <p class="text-slate-500">
-            Transcript not available for this meeting.
-          </p>
+          <div class="flex items-center justify-center h-full">
+            <p class="text-sm text-gray-400 dark:text-gray-500">Transcript not available.</p>
+          </div>
         <% end %>
       </div>
-    </div>
+    </section>
     """
   end
 end

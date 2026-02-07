@@ -33,6 +33,8 @@ defmodule SocialScribeWeb.UserSettingsLive do
       |> assign(:salesforce_accounts, salesforce_accounts)
       |> assign(:user_bot_preference, user_bot_preference)
       |> assign(:user_bot_preference_form, to_form(changeset))
+      |> assign(:timezone_mode, "browser")
+      |> assign(:selected_timezone, "America/New_York")
 
     {:ok, socket}
   end
@@ -87,6 +89,17 @@ defmodule SocialScribeWeb.UserSettingsLive do
   @impl true
   def handle_event("validate", params, socket) do
     {:noreply, assign(socket, :form, to_form(params))}
+  end
+
+  @impl true
+  def handle_event("toggle_timezone_mode", _params, socket) do
+    new_mode = if socket.assigns.timezone_mode == "browser", do: "manual", else: "browser"
+    {:noreply, assign(socket, :timezone_mode, new_mode)}
+  end
+
+  @impl true
+  def handle_event("update_timezone", %{"timezone" => timezone}, socket) do
+    {:noreply, assign(socket, :selected_timezone, timezone)}
   end
 
   @impl true
