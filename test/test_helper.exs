@@ -20,3 +20,7 @@ Application.put_env(
 )
 
 Application.put_env(:social_scribe, :hubspot_api, SocialScribe.HubspotApiMock)
+
+# CRM abstraction layer mock (unified mock for all CRM adapters)
+Mox.defmock(SocialScribe.CrmApiMock, for: SocialScribe.Crm.Behaviour)
+Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)

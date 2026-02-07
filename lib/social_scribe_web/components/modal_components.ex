@@ -71,7 +71,7 @@ defmodule SocialScribeWeb.ModalComponents do
               phx-keyup="contact_search"
               phx-target={@target}
               phx-focus="open_contact_dropdown"
-              phx-debounce="150"
+              phx-debounce="500"
               autocomplete="off"
               role="combobox"
               aria-autocomplete="list"

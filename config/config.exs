@@ -21,7 +21,8 @@ config :social_scribe, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"*/2 * * * *", SocialScribe.Workers.BotStatusPoller},
-       {"*/5 * * * *", SocialScribe.Workers.HubspotTokenRefresher}
+       {"*/5 * * * *", SocialScribe.Workers.HubspotTokenRefresher},
+       {"*/5 * * * *", SocialScribe.Workers.CrmTokenRefresher}
      ]}
   ]
 
@@ -99,6 +100,19 @@ config :ueberauth, Ueberauth,
       {Ueberauth.Strategy.Hubspot,
        [
          default_scope: "crm.objects.contacts.read crm.objects.contacts.write oauth"
+       ]},
+    salesforce:
+      {Ueberauth.Strategy.Salesforce,
+       [
+         # openid: user identity (minimal), refresh_token: token refresh
+         # api: REST API access for contact CRUD (required for SOQL/SObject operations)
+         # NOTE: In Salesforce Connected App settings, set "Selected OAuth Scopes" to only:
+         #   - Manage user data via APIs (api)
+         #   - Perform requests at any time (refresh_token)
+         #   - Access unique user identifiers (openid)
+         default_scope: "openid api refresh_token",
+         # Force consent screen on every connect so users see exact permissions
+         prompt: "consent"
        ]}
   ]
 

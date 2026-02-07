@@ -109,6 +109,29 @@
       </div>
     </div>
 
+    <div :if={@crm_credentials["salesforce"]} class="bg-white shadow-xl rounded-lg p-6 md:p-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-semibold text-slate-700">Salesforce Integration</h2>
+          <p class="text-sm text-slate-500 mt-1">
+            Update CRM contacts with information from this meeting
+          </p>
+        </div>
+        <.link
+          patch={~p"/dashboard/meetings/#{@meeting}/salesforce"}
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M10.008 3.083c1.063-1.123 2.537-1.82 4.17-1.82 2.138 0 3.97 1.176 4.95 2.917.86-.378 1.8-.588 2.792-.588C24.99 3.592 27.6 6.2 27.6 9.272c0 .38-.039.75-.112 1.108 1.825.85 3.088 2.713 3.088 4.87 0 2.953-2.393 5.346-5.346 5.346H7.44c-3.396 0-6.148-2.753-6.148-6.148 0-2.78 1.845-5.13 4.377-5.894.19-2.417 1.697-4.458 3.839-5.471z"
+              transform="scale(0.73)"
+            />
+          </svg>
+          Update Salesforce Contact
+        </.link>
+      </div>
+    </div>
+
     <.transcript_content meeting_transcript={@meeting.meeting_transcript} />
     <div class="bg-white shadow-xl rounded-lg p-6 md:p-8">
       <h2 class="text-2xl font-semibold mb-4 text-slate-700">Attendees</h2>
@@ -167,5 +190,21 @@
     meeting={@meeting}
     credential={@hubspot_credential}
     modal_id="hubspot-modal-wrapper"
+  />
+</.hubspot_modal>
+
+<.hubspot_modal
+  :if={@live_action == :salesforce && @crm_credentials["salesforce"]}
+  id="crm-modal-salesforce-wrapper"
+  show
+  on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
+>
+  <.live_component
+    module={SocialScribeWeb.MeetingLive.CrmModalComponent}
+    id="crm-modal-salesforce"
+    meeting={@meeting}
+    credential={@crm_credentials["salesforce"]}
+    provider="salesforce"
+    modal_id="crm-modal-salesforce-wrapper"
   />
 </.hubspot_modal>

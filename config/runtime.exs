@@ -35,11 +35,34 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
 
 config :social_scribe, :recall_api_key, System.get_env("RECALL_API_KEY")
 config :social_scribe, :recall_region, System.get_env("RECALL_REGION")
+
+# LLM provider configuration
+# Set LLM_PROVIDER to "gemini" to use Google Gemini, defaults to "anthropic"
+llm_provider =
+  case System.get_env("LLM_PROVIDER", "anthropic") do
+    "gemini" -> SocialScribe.LLM.Gemini
+    "anthropic" -> SocialScribe.LLM.Anthropic
+    _ -> SocialScribe.LLM.Anthropic
+  end
+
+config :social_scribe, :llm_provider, llm_provider
+
+# Gemini (kept for backward compat; only used when LLM_PROVIDER=gemini)
 config :social_scribe, :gemini_api_key, System.get_env("GEMINI_API_KEY")
+config :social_scribe, :gemini_model, System.get_env("GEMINI_MODEL")
+
+# Anthropic (default provider)
+config :social_scribe, :anthropic_base_url, System.get_env("ANTHROPIC_BASE_URL")
+config :social_scribe, :anthropic_auth_token, System.get_env("ANTHROPIC_AUTH_TOKEN")
+config :social_scribe, :anthropic_model, System.get_env("ANTHROPIC_MODEL")
 
 config :ueberauth, Ueberauth.Strategy.Hubspot.OAuth,
   client_id: System.get_env("HUBSPOT_CLIENT_ID"),
   client_secret: System.get_env("HUBSPOT_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Salesforce.OAuth,
+  client_id: System.get_env("SALESFORCE_CLIENT_ID"),
+  client_secret: System.get_env("SALESFORCE_CLIENT_SECRET")
 
 if System.get_env("PHX_SERVER") do
   config :social_scribe, SocialScribeWeb.Endpoint, server: true
@@ -58,32 +81,35 @@ if config_env() == :prod do
   # Parse DATABASE_URL for Cloud SQL Unix socket connections
   # Format: ecto://user:pass@localhost/db?socket=/cloudsql/project:region:instance
   uri = URI.parse(database_url)
-  socket_dir = if uri.query do
-    uri.query
-    |> URI.decode_query()
-    |> Map.get("socket")
-  end
 
-  repo_config = if socket_dir do
-    # For Cloud SQL socket connections, configure manually (don't use URL with host)
-    [userinfo_user, userinfo_pass] = String.split(uri.userinfo || ":", ":")
-    database = String.trim_leading(uri.path || "", "/")
+  socket_dir =
+    if uri.query do
+      uri.query
+      |> URI.decode_query()
+      |> Map.get("socket")
+    end
 
-    [
-      username: userinfo_user,
-      password: userinfo_pass,
-      database: database,
-      socket_dir: socket_dir,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
-    ]
-  else
-    # Standard TCP connection
-    [
-      url: database_url,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-      socket_options: maybe_ipv6
-    ]
-  end
+  repo_config =
+    if socket_dir do
+      # For Cloud SQL socket connections, configure manually (don't use URL with host)
+      [userinfo_user, userinfo_pass] = String.split(uri.userinfo || ":", ":")
+      database = String.trim_leading(uri.path || "", "/")
+
+      [
+        username: userinfo_user,
+        password: userinfo_pass,
+        database: database,
+        socket_dir: socket_dir,
+        pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+      ]
+    else
+      # Standard TCP connection
+      [
+        url: database_url,
+        pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+        socket_options: maybe_ipv6
+      ]
+    end
 
   config :social_scribe, SocialScribe.Repo, repo_config
 

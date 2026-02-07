@@ -1,4 +1,5 @@
 import Config
+
 config :social_scribe, Oban, testing: :manual
 
 # Only in tests, remove the complexity from the password hashing algorithm

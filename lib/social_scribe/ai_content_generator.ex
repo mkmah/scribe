@@ -1,13 +1,17 @@
 defmodule SocialScribe.AIContentGenerator do
-  @moduledoc "Generates content using Google Gemini."
+  @moduledoc """
+  Generates AI content for meetings.
+
+  Delegates the actual LLM call to whichever provider is configured
+  via `:llm_provider` (Anthropic, Gemini, etc.). All prompt construction
+  and response parsing lives here — completely provider-agnostic.
+  """
 
   @behaviour SocialScribe.AIContentGeneratorApi
 
   alias SocialScribe.Meetings
   alias SocialScribe.Automations
-
-  @gemini_model "gemini-2.0-flash-lite"
-  @gemini_api_base_url "https://generativelanguage.googleapis.com/v1beta/models"
+  alias SocialScribe.LLM.Provider, as: LLM
 
   @impl SocialScribe.AIContentGeneratorApi
   def generate_follow_up_email(meeting) do
@@ -24,7 +28,7 @@ defmodule SocialScribe.AIContentGenerator do
         #{meeting_prompt}
         """
 
-        call_gemini(prompt)
+        LLM.complete(prompt)
     end
   end
 
@@ -41,7 +45,7 @@ defmodule SocialScribe.AIContentGenerator do
         #{meeting_prompt}
         """
 
-        call_gemini(prompt)
+        LLM.complete(prompt)
     end
   end
 
@@ -91,9 +95,9 @@ defmodule SocialScribe.AIContentGenerator do
         #{meeting_prompt}
         """
 
-        case call_gemini(prompt) do
+        case LLM.complete(prompt) do
           {:ok, response} ->
-            parse_hubspot_suggestions(response)
+            parse_json_suggestions(response)
 
           {:error, reason} ->
             {:error, reason}
@@ -101,8 +105,82 @@ defmodule SocialScribe.AIContentGenerator do
     end
   end
 
-  defp parse_hubspot_suggestions(response) do
-    # Clean up the response - remove markdown code blocks if present
+  @impl SocialScribe.AIContentGeneratorApi
+  def generate_crm_suggestions(meeting) do
+    case Meetings.generate_prompt_for_meeting(meeting) do
+      {:error, reason} ->
+        {:error, reason}
+
+      {:ok, meeting_prompt} ->
+        prompt = """
+        You are an AI assistant that extracts contact information updates from meeting transcripts.
+
+        Analyze the following meeting transcript and extract any information that could be used to update a CRM contact record.
+
+        Look for mentions of:
+        - Phone numbers (phone, mobile_phone)
+        - Email addresses (email)
+        - Company name (company)
+        - Job title/role (job_title)
+        - Physical address details (address, city, state, zip, country)
+        - Website URLs (website)
+        - LinkedIn profile (linkedin_url)
+        - Twitter handle (twitter_handle)
+
+        IMPORTANT: Only extract information that is EXPLICITLY mentioned in the transcript. Do not infer or guess.
+
+        The transcript includes timestamps in [MM:SS] format at the start of each line.
+
+        Return your response as a JSON array of objects. Each object should have:
+        - "field": the canonical CRM field name (use exactly: first_name, last_name, email, phone, mobile_phone, company, job_title, address, city, state, zip, country, website, linkedin_url, twitter_handle)
+        - "value": the extracted value
+        - "context": a brief quote of where this was mentioned
+        - "timestamp": the timestamp in MM:SS format where this was mentioned
+
+        If no contact information updates are found, return an empty array: []
+
+        Example response format:
+        [
+          {"field": "phone", "value": "555-123-4567", "context": "John mentioned 'you can reach me at 555-123-4567'", "timestamp": "01:23"},
+          {"field": "company", "value": "Acme Corp", "context": "Sarah said she just joined Acme Corp", "timestamp": "05:47"}
+        ]
+
+        ONLY return valid JSON, no other text.
+
+        Meeting transcript:
+        #{meeting_prompt}
+        """
+
+        case LLM.complete(prompt) do
+          {:ok, response} ->
+            parse_json_suggestions(response)
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
+
+  @impl SocialScribe.AIContentGeneratorApi
+  def answer_crm_question(question, context) do
+    prompt = """
+    You are an AI assistant that answers questions about CRM contacts and meetings.
+
+    Context:
+    #{Jason.encode!(context)}
+
+    Question: #{question}
+
+    Provide a concise, helpful answer based on the context provided.
+    If the information is not available in the context, say so clearly.
+    """
+
+    LLM.complete(prompt)
+  end
+
+  # --- Private helpers --------------------------------------------------------
+
+  defp parse_json_suggestions(response) do
     cleaned =
       response
       |> String.trim()
@@ -131,56 +209,7 @@ defmodule SocialScribe.AIContentGenerator do
         {:ok, []}
 
       {:error, _} ->
-        # If JSON parsing fails, return empty suggestions
         {:ok, []}
     end
-  end
-
-  defp call_gemini(prompt_text) do
-    api_key = Application.get_env(:social_scribe, :gemini_api_key)
-
-    if is_nil(api_key) or api_key == "" do
-      {:error, {:config_error, "Gemini API key is missing - set GEMINI_API_KEY env var"}}
-    else
-      path = "/#{@gemini_model}:generateContent?key=#{api_key}"
-
-      payload = %{
-        contents: [
-          %{
-            parts: [%{text: prompt_text}]
-          }
-        ]
-      }
-
-      case Tesla.post(client(), path, payload) do
-        {:ok, %Tesla.Env{status: 200, body: body}} ->
-          text_path = [
-            "candidates",
-            Access.at(0),
-            "content",
-            "parts",
-            Access.at(0),
-            "text"
-          ]
-
-          case get_in(body, text_path) do
-            nil -> {:error, {:parsing_error, "No text content found in Gemini response", body}}
-            text_content -> {:ok, text_content}
-          end
-
-        {:ok, %Tesla.Env{status: status, body: error_body}} ->
-          {:error, {:api_error, status, error_body}}
-
-        {:error, reason} ->
-          {:error, {:http_error, reason}}
-      end
-    end
-  end
-
-  defp client do
-    Tesla.client([
-      {Tesla.Middleware.BaseUrl, @gemini_api_base_url},
-      Tesla.Middleware.JSON
-    ])
   end
 end

@@ -10,6 +10,8 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   alias SocialScribe.Accounts
   alias SocialScribe.HubspotApiBehaviour, as: HubspotApi
   alias SocialScribe.HubspotSuggestions
+  alias SocialScribe.Crm.Registry
+  alias SocialScribe.Crm.Suggestions, as: CrmSuggestions
 
   @impl true
   def mount(%{"id" => meeting_id}, _session, socket) do
@@ -30,7 +32,11 @@ defmodule SocialScribeWeb.MeetingLive.Show do
 
       {:error, socket}
     else
+      # Old HubSpot credential (for backward compatibility)
       hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
+
+      # Build CRM credentials map for all registered providers
+      crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
 
       socket =
         socket
@@ -39,6 +45,7 @@ defmodule SocialScribeWeb.MeetingLive.Show do
         |> assign(:automation_results, automation_results)
         |> assign(:user_has_automations, user_has_automations)
         |> assign(:hubspot_credential, hubspot_credential)
+        |> assign(:crm_credentials, crm_credentials)
         |> assign(
           :follow_up_email_form,
           to_form(%{
@@ -76,6 +83,8 @@ defmodule SocialScribeWeb.MeetingLive.Show do
 
     {:noreply, socket}
   end
+
+  # === Old HubSpot-specific handlers (kept for backward compat until Phase 6) ===
 
   @impl true
   def handle_info({:hubspot_search, query, credential}, socket) do
@@ -142,6 +151,93 @@ defmodule SocialScribeWeb.MeetingLive.Show do
 
         {:noreply, socket}
     end
+  end
+
+  # === Generic CRM handlers ===
+
+  @impl true
+  def handle_info({:crm_search, provider, query, credential}, socket) do
+    adapter = Registry.adapter_for!(provider)
+
+    case adapter.search_contacts(credential, query) do
+      {:ok, contacts} ->
+        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
+          id: "crm-modal-#{provider}",
+          contacts: contacts,
+          searching: false
+        )
+
+      {:error, reason} ->
+        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
+          id: "crm-modal-#{provider}",
+          error: "Failed to search contacts: #{inspect(reason)}",
+          searching: false
+        )
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:crm_generate_suggestions, provider, contact, meeting, _credential}, socket) do
+    case CrmSuggestions.generate_from_meeting(meeting) do
+      {:ok, suggestions} ->
+        merged = CrmSuggestions.merge_with_contact(suggestions, contact)
+
+        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
+          id: "crm-modal-#{provider}",
+          step: :suggestions,
+          suggestions: merged,
+          loading: false
+        )
+
+      {:error, reason} ->
+        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
+          id: "crm-modal-#{provider}",
+          error: "Failed to generate suggestions: #{inspect(reason)}",
+          loading: false
+        )
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket) do
+    adapter = Registry.adapter_for!(provider)
+    provider_label = Registry.provider_label(provider)
+
+    case adapter.update_contact(credential, contact.id, updates) do
+      {:ok, _updated_contact} ->
+        socket =
+          socket
+          |> put_flash(
+            :info,
+            "Successfully updated #{map_size(updates)} field(s) in #{provider_label}"
+          )
+          |> push_patch(to: ~p"/dashboard/meetings/#{socket.assigns.meeting}")
+
+        {:noreply, socket}
+
+      {:error, reason} ->
+        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
+          id: "crm-modal-#{provider}",
+          error: "Failed to update contact: #{inspect(reason)}",
+          loading: false
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  defp build_crm_credentials(user_id) do
+    Registry.crm_providers()
+    |> Enum.reduce(%{}, fn provider, acc ->
+      case Accounts.get_user_crm_credential(user_id, provider) do
+        nil -> acc
+        credential -> Map.put(acc, provider, credential)
+      end
+    end)
   end
 
   defp normalize_contact(contact) do

@@ -16,6 +16,8 @@ defmodule SocialScribeWeb.UserSettingsLive do
 
     hubspot_accounts = Accounts.list_user_credentials(current_user, provider: "hubspot")
 
+    salesforce_accounts = Accounts.list_user_credentials(current_user, provider: "salesforce")
+
     user_bot_preference =
       Bots.get_user_bot_preference(current_user.id) || %Bots.UserBotPreference{}
 
@@ -28,6 +30,7 @@ defmodule SocialScribeWeb.UserSettingsLive do
       |> assign(:linkedin_accounts, linkedin_accounts)
       |> assign(:facebook_accounts, facebook_accounts)
       |> assign(:hubspot_accounts, hubspot_accounts)
+      |> assign(:salesforce_accounts, salesforce_accounts)
       |> assign(:user_bot_preference, user_bot_preference)
       |> assign(:user_bot_preference_form, to_form(changeset))
 
@@ -84,6 +87,33 @@ defmodule SocialScribeWeb.UserSettingsLive do
   @impl true
   def handle_event("validate", params, socket) do
     {:noreply, assign(socket, :form, to_form(params))}
+  end
+
+  @impl true
+  def handle_event("disconnect_account", %{"id" => id}, socket) do
+    credential = Accounts.get_user_credential!(id)
+
+    # Ensure the credential belongs to the current user
+    if credential.user_id == socket.assigns.current_user.id do
+      case Accounts.delete_user_credential(credential) do
+        {:ok, _} ->
+          provider = credential.provider
+          assign_key = String.to_existing_atom("#{provider}_accounts")
+
+          updated_accounts =
+            Accounts.list_user_credentials(socket.assigns.current_user, provider: provider)
+
+          {:noreply,
+           socket
+           |> assign(assign_key, updated_accounts)
+           |> put_flash(:info, "#{String.capitalize(provider)} account disconnected.")}
+
+        {:error, _reason} ->
+          {:noreply, put_flash(socket, :error, "Could not disconnect account.")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Unauthorized.")}
+    end
   end
 
   @impl true
