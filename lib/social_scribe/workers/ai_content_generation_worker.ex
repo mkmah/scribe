@@ -9,6 +9,25 @@ defmodule SocialScribe.Workers.AIContentGenerationWorker do
   require Logger
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"meeting_id" => meeting_id, "action" => "regenerate_automations"}}) do
+    Logger.info("Starting automation regeneration for meeting_id: #{meeting_id}")
+
+    case Meetings.get_meeting_with_details(meeting_id) do
+      nil ->
+        Logger.error("AIContentGenerationWorker: Meeting not found for id #{meeting_id}")
+        {:error, :meeting_not_found}
+
+      meeting ->
+        if meeting.calendar_event && meeting.calendar_event.user_id do
+          process_user_automations(meeting, meeting.calendar_event.user_id)
+          :ok
+        else
+          {:error, :no_user_associated}
+        end
+    end
+  end
+
+  @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id}}) do
     Logger.info("Starting AI content generation for meeting_id: #{meeting_id}")
 
@@ -97,5 +116,15 @@ defmodule SocialScribe.Workers.AIContentGenerationWorker do
         end
       end
     end
+  end
+
+  @doc """
+  Enqueues a job to regenerate automation content for a specific meeting.
+  This is a public function that can be called from the LiveView to trigger regeneration.
+  """
+  def enqueue_automation_regeneration(meeting_id, user_id) do
+    %{"meeting_id" => meeting_id, "action" => "regenerate_automations", "user_id" => user_id}
+    |> __MODULE__.new()
+    |> Oban.insert()
   end
 end

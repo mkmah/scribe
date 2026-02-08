@@ -60,7 +60,7 @@ defmodule SocialScribe.Crm.Adapters.SalesforceFields do
     attrs =
       @mappings
       |> Enum.reduce(%{id: id, provider: "salesforce", provider_data: response}, fn mapping,
-                                                                                     acc ->
+                                                                                    acc ->
         value = Map.get(response, mapping.provider)
         Map.put(acc, String.to_atom(mapping.canonical), value)
       end)

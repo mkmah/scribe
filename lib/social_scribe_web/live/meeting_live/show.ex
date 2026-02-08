@@ -3,7 +3,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
 
   import SocialScribeWeb.PlatformLogo
   import SocialScribeWeb.ClipboardButton
-  import SocialScribeWeb.ModalComponents, only: [hubspot_modal: 1]
 
   alias SocialScribe.Meetings
   alias SocialScribe.Automations
@@ -12,6 +11,7 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   alias SocialScribe.HubspotSuggestions
   alias SocialScribe.Crm.Registry
   alias SocialScribe.Crm.Suggestions, as: CrmSuggestions
+  alias SocialScribe.Workers.AIContentGenerationWorker
 
   @impl true
   def mount(%{"id" => meeting_id}, _session, socket) do
@@ -46,6 +46,7 @@ defmodule SocialScribeWeb.MeetingLive.Show do
         |> assign(:user_has_automations, user_has_automations)
         |> assign(:hubspot_credential, hubspot_credential)
         |> assign(:crm_credentials, crm_credentials)
+        |> assign(:regenerating, false)
         |> assign(
           :follow_up_email_form,
           to_form(%{
@@ -82,6 +83,29 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       |> assign(:follow_up_email_form, to_form(params))
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("regenerate-automations", _params, socket) do
+    meeting = socket.assigns.meeting
+    user_id = socket.assigns.current_user.id
+
+    case AIContentGenerationWorker.enqueue_automation_regeneration(meeting.id, user_id) do
+      {:ok, _job} ->
+        socket =
+          socket
+          |> put_flash(:info, "Regeneration started. Please wait...")
+          |> assign(:regenerating, true)
+
+        {:noreply, socket}
+
+      {:error, reason} ->
+        socket =
+          socket
+          |> put_flash(:error, "Failed to start regeneration: #{inspect(reason)}")
+
+        {:noreply, socket}
+    end
   end
 
   # === Old HubSpot-specific handlers (kept for backward compat until Phase 6) ===
@@ -245,6 +269,11 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     contact
   end
 
+  # Returns true if all automation results have failed status
+  defp has_only_failed_results(automation_results) do
+    Enum.all?(automation_results, fn result -> result.status == "generation_failed" end)
+  end
+
   defp format_duration(nil), do: "N/A"
 
   defp format_duration(seconds) when is_integer(seconds) do
@@ -257,6 +286,33 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       seconds > 0 -> "#{seconds} sec"
       true -> "Less than a second"
     end
+  end
+
+  # Generate consistent color for a participant based on their name
+  def participant_color(name) do
+    colors = [
+      # Pastel/soft colors that work well in both light and dark modes
+      %{bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400"},
+      %{bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400"},
+      %{bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-400"},
+      %{bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400"},
+      %{bg: "bg-rose-100 dark:bg-rose-900/30", text: "text-rose-700 dark:text-rose-400"},
+      %{bg: "bg-cyan-100 dark:bg-cyan-900/30", text: "text-cyan-700 dark:text-cyan-400"},
+      %{bg: "bg-fuchsia-100 dark:bg-fuchsia-900/30", text: "text-fuchsia-700 dark:text-fuchsia-400"},
+      %{bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-400"},
+      %{bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-400"},
+      %{bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-400"},
+      %{bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-700 dark:text-indigo-400"},
+      %{bg: "bg-lime-100 dark:bg-lime-900/30", text: "text-lime-700 dark:text-lime-400"}
+    ]
+
+    # Use a simple hash to pick a consistent color for the same name
+    index =
+      name
+      |> :erlang.phash2()
+      |> rem(length(colors))
+
+    Enum.at(colors, index)
   end
 
   attr :meeting_transcript, :map, required: true
@@ -273,37 +329,32 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       |> assign(:has_transcript, has_transcript)
 
     ~H"""
-    <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-      <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
-        <.icon name="hero-chat-bubble-bottom-center-text" class="h-4 w-4 text-gray-400" />
-        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Transcript</h2>
-      </div>
-      <div class="p-5 h-96 overflow-y-auto scrollbar-thin">
-        <%= if @has_transcript do %>
-          <div class="space-y-3">
-            <div :for={segment <- @meeting_transcript.content["data"]} class="flex gap-3">
-              <div class="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center mt-0.5">
-                <span class="text-[9px] font-bold text-brand-700 dark:text-brand-400">
-                  {String.at(segment["speaker"] || "?", 0) |> String.upcase()}
-                </span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold text-brand-600 dark:text-brand-400 mb-0.5">
-                  {segment["speaker"] || "Unknown Speaker"}
-                </p>
-                <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {Enum.map_join(segment["words"] || [], " ", & &1["text"])}
-                </p>
-              </div>
+    <div class="overflow-y-auto h-96 scrollbar-thin">
+      <%= if @has_transcript do %>
+        <div class="space-y-2">
+          <div :for={segment <- @meeting_transcript.content["data"]} class="flex gap-3">
+            <% color = participant_color(segment["participant"]["name"]) %>
+            <div class={"flex-shrink-0 w-6 h-6 rounded-full #{color.bg} flex items-center justify-center mt-0.5"}>
+              <span class="text-[8px] font-bold text-gray-700 dark:text-gray-300">
+                {String.at(segment["participant"]["name"] || "?", 0) |> String.upcase()}
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class={"font-semibold mb-0.5 #{color.text}"}>
+                {segment["participant"]["name"] || "Unknown Participant"}
+              </p>
+              <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                {Enum.map_join(segment["words"] || [], " ", & &1["text"])}
+              </p>
             </div>
           </div>
-        <% else %>
-          <div class="flex items-center justify-center h-full">
-            <p class="text-sm text-gray-400 dark:text-gray-500">Transcript not available.</p>
-          </div>
-        <% end %>
-      </div>
-    </section>
+        </div>
+      <% else %>
+        <div class="flex items-center justify-center h-full">
+          <p class="text-sm text-gray-400 dark:text-gray-500">Transcript not available.</p>
+        </div>
+      <% end %>
+    </div>
     """
   end
 end

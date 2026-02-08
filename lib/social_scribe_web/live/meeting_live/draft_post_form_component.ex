@@ -1,5 +1,6 @@
 defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponent do
   use SocialScribeWeb, :live_component
+
   import SocialScribeWeb.ClipboardButton
 
   alias SocialScribe.Poster
@@ -7,42 +8,45 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
-      <.header>
-        Draft Post
-        <:subtitle>Generate a post based on insights from this meeting.</:subtitle>
-      </.header>
+    <div class="space-y-6">
+      <div>
+        <h3 class="text-lg font-semibold">Draft Post</h3>
+        <p class="text-sm text-muted-foreground">
+          Generate a post based on insights from this meeting.
+        </p>
+      </div>
 
-      <.simple_form
+      <.form
         for={@form}
         id="draft-post-form"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="post"
+        class="space-y-4"
       >
-        <.input
-          field={@form[:generated_content]}
-          type="textarea"
-          value={@automation_result.generated_content}
-          class="bg-black"
-        />
+        <.form_field>
+          <.textarea
+            field={@form[:generated_content]}
+            value={@automation_result.generated_content}
+            rows={6}
+          />
+        </.form_field>
 
-        <:actions>
+        <div class="flex items-center justify-between pt-4">
           <.clipboard_button id="draft-post-button" text={@form[:generated_content].value} />
 
-          <div class="flex justify-end gap-2">
-            <button
+          <div class="flex items-center gap-2">
+            <.button
               type="button"
-              phx-click={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
-              phx-disable-with="Cancelling..."
-              class="bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 leading-none py-2 px-3 rounded-md text-sm hover:bg-gray-200 dark:hover:bg-[#2e2e2e] transition-colors"
+              variant="outline"
+              phx-click={Phoenix.LiveView.JS.patch(~p"/dashboard/meetings/#{@meeting}")}
             >
               Cancel
-            </button>
+            </.button>
             <.button type="submit" phx-disable-with="Posting...">Post</.button>
           </div>
-        </:actions>
-      </.simple_form>
+        </div>
+      </.form>
     </div>
     """
   end

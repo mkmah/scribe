@@ -6,32 +6,46 @@ defmodule SocialScribeWeb.AutomationLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
-      <.header>
-        {@title}
-        <:subtitle>Use this form to manage automation records in your database.</:subtitle>
-      </.header>
+    <div class="mt-2 space-y-6">
+      <div>
+        <p class="text-sm text-muted-foreground">
+          Use this form to manage automation records in your database.
+        </p>
+      </div>
 
-      <.simple_form
+      <.form
         for={@form}
         id="automation-form"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
+        class="space-y-4"
       >
-        <.input field={@form[:name]} type="text" label="Name" />
-        <.input
-          field={@form[:platform]}
-          type="select"
-          label="Platform"
-          options={Ecto.Enum.values(Automations.Automation, :platform)}
-        />
-        <.input field={@form[:description]} type="textarea" label="Description" />
-        <.input field={@form[:example]} type="textarea" label="Example" />
-        <:actions>
-          <.button phx-disable-with="Saving...">Save Automation</.button>
-        </:actions>
-      </.simple_form>
+        <.form_field label="Name">
+          <.input field={@form[:name]} type="text" />
+        </.form_field>
+
+        <.form_field label="Platform">
+          <.select
+            field={@form[:platform]}
+            options={Ecto.Enum.values(Automations.Automation, :platform)}
+          />
+        </.form_field>
+
+        <.form_field label="Description">
+          <.textarea field={@form[:description]} />
+        </.form_field>
+
+        <.form_field label="Example">
+          <.textarea field={@form[:example]} />
+        </.form_field>
+
+        <div class="flex justify-end gap-2 pt-4">
+          <.button type="submit" phx-disable-with="Saving...">
+            Save Automation
+          </.button>
+        </div>
+      </.form>
     </div>
     """
   end

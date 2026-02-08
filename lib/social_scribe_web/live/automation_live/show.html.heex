@@ -1,47 +1,82 @@
 <div class="space-y-6">
   <div>
-    <.link href={~p"/dashboard/automations"} class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors mb-4">
-      <.icon name="hero-arrow-left-mini" class="h-3 w-3" />
-      Back to Automations
+    <.link
+      href={~p"/dashboard/automations"}
+      class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+    >
+      <.chevron_left class="h-4 w-4" /> Back to Automations
     </.link>
   </div>
 
-  <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 dark:border-[#2e2e2e] flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+  <.card>
+    <.card_header class="flex flex-row items-center justify-between space-y-0 pb-2">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100 tracking-tight">{@automation.name}</h1>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Platform: {@automation.platform}</p>
+        <.card_title>{@automation.name}</.card_title>
+        <.card_description>Platform: {@automation.platform}</.card_description>
       </div>
-      <.link patch={~p"/dashboard/automations/#{@automation}/show/edit"} phx-click={JS.push_focus()}>
-        <.button class="bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600">Edit</.button>
+      <.link
+        patch={~p"/dashboard/automations/#{@automation}/show/edit"}
+        phx-click={JS.push_focus()}
+      >
+        <.button>Edit</.button>
       </.link>
-    </div>
-
-    <div class="divide-y divide-gray-100 dark:divide-[#2e2e2e]">
-      <div class="px-6 py-4">
-        <h2 class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Description</h2>
-        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{@automation.description}</p>
+    </.card_header>
+    <.card_content class="space-y-6">
+      <div class="space-y-2">
+        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Description
+        </h3>
+        <p class="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+          {@automation.description}
+        </p>
       </div>
 
-      <div class="px-6 py-4">
-        <h2 class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Example</h2>
-        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{@automation.example}</p>
+      <div class="space-y-2">
+        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Example
+        </h3>
+        <p class="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+          {@automation.example}
+        </p>
       </div>
 
-      <div class="px-6 py-4">
-        <h2 class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Status</h2>
-        <div class="flex items-center gap-2.5">
-          <span class="text-sm text-gray-600 dark:text-gray-400">Active</span>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input id={"automation-#{@automation.id}-checkbox"} type="checkbox" class="sr-only peer" checked={@automation.is_active} phx-click="toggle_automation" phx-value-id={@automation.id} />
-            <div class="w-9 h-5 bg-gray-200 dark:bg-[#2e2e2e] rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:shadow-sm after:transition-all peer-checked:bg-brand-500 transition-colors"></div>
-          </label>
+      <div class="flex items-center justify-between pt-4 border-t">
+        <span class="text-sm font-medium text-muted-foreground">Status</span>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-muted-foreground">
+            {if @automation.is_active, do: "Active", else: "Inactive"}
+          </span>
+          <.switch
+            name="automation-#{@automation.id}"
+            checked={@automation.is_active}
+            phx-click="toggle_automation"
+            phx-value-id={@automation.id}
+          />
         </div>
       </div>
-    </div>
-  </div>
+    </.card_content>
+  </.card>
 </div>
 
-<.modal :if={@live_action == :edit} id="automation-modal" show on_cancel={JS.patch(~p"/dashboard/automations/#{@automation}")}>
-  <.live_component module={SocialScribeWeb.AutomationLive.FormComponent} id={@automation.id} title={@page_title} action={@live_action} automation={@automation} current_user={@current_user} patch={~p"/dashboard/automations/#{@automation}"} />
-</.modal>
+<%= if @live_action == :edit do %>
+  <.dialog
+    id="automation-modal"
+    show
+    on_cancel={JS.patch(~p"/dashboard/automations/#{@automation}")}
+  >
+    <:header>
+      <.dialog_title>{@page_title}</.dialog_title>
+    </:header>
+    <:content>
+      <.live_component
+        module={SocialScribeWeb.AutomationLive.FormComponent}
+        id={@automation.id}
+        title={@page_title}
+        action={@live_action}
+        automation={@automation}
+        current_user={@current_user}
+        patch={~p"/dashboard/automations/#{@automation}"}
+      />
+    </:content>
+  </.dialog>
+<% end %>

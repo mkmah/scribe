@@ -53,7 +53,10 @@ defmodule Ueberauth.Strategy.Salesforce do
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
     code_verifier = get_session(conn, :salesforce_code_verifier)
-    Logger.info("Salesforce callback - code received, code_verifier present: #{!is_nil(code_verifier)}")
+
+    Logger.info(
+      "Salesforce callback - code received, code_verifier present: #{!is_nil(code_verifier)}"
+    )
 
     params = [code: code, code_verifier: code_verifier]
     opts = oauth_client_options_from_conn(conn)

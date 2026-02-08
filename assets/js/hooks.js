@@ -1,6 +1,29 @@
-import { getThemePref, updateIndicators, setTheme } from "./theme"
+import { getThemePref, applyTheme, updateIndicators, setTheme } from "./theme"
 
 let Hooks = {}
+
+// Simple theme toggle handler for icon button
+Hooks.ThemeToggleHandler = {
+    mounted() {
+        this.el.addEventListener("toggle-theme", () => {
+            const currentPref = getThemePref()
+            let newPref
+            
+            // Toggle between light and dark
+            if (currentPref === "dark") {
+                newPref = "light"
+            } else if (currentPref === "light") {
+                newPref = "dark"
+            } else {
+                // If system, check current state and toggle
+                const isDark = document.documentElement.classList.contains("dark")
+                newPref = isDark ? "light" : "dark"
+            }
+            
+            setTheme(newPref)
+        })
+    }
+}
 
 Hooks.ThemeToggle = {
     mounted() {

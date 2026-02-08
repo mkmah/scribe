@@ -97,6 +97,7 @@ defmodule SocialScribeWeb.Router do
   scope "/", SocialScribeWeb do
     pipe_through [:browser]
 
+    get "/users/log_out", UserSessionController, :delete
     delete "/users/log_out", UserSessionController, :delete
 
     live_session :current_user,

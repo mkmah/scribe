@@ -1,226 +1,287 @@
-<div class="space-y-6">
+<div class="space-y-4">
   <%!-- Header --%>
   <div>
     <.link
       href={~p"/dashboard/meetings"}
-      class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors mb-4"
+      class="inline-flex items-center gap-2 mb-4 text-sm transition-colors text-muted-foreground hover:text-foreground"
     >
-      <.icon name="hero-arrow-left-mini" class="h-3 w-3" />
-      Back to Meetings
+      <.chevron_left class="w-4 h-4" /> Back to Meetings
     </.link>
 
-    <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] p-5">
-      <div class="flex items-start justify-between">
-        <div>
-          <div class="flex items-center gap-2.5">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
-              {@meeting.title}
-            </h1>
-            <.platform_logo recall_bot={@meeting.recall_bot} class="size-5" />
+    <.card>
+      <.card_content class="pt-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl font-semibold tracking-tight">{@meeting.title}</h1>
+              <.platform_logo recall_bot={@meeting.recall_bot} class="w-5 h-5" />
+            </div>
+            <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <span class="flex items-center gap-1">
+                <.icon name="hero-calendar" class="w-4 h-4" />
+                {@meeting.recorded_at}
+              </span>
+              <span class="flex items-center gap-1">
+                <.icon name="hero-clock" class="w-4 h-4" />
+                {format_duration(@meeting.duration_seconds)}
+              </span>
+              <.link
+                href={@meeting.calendar_event.html_link || "#"}
+                target="_blank"
+                class="flex items-center gap-1 text-primary hover:underline"
+              >
+                <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" /> Google Calendar
+              </.link>
+            </div>
+            <div>
+              <h3 class="mb-2 text-sm font-medium text-muted-foreground">
+                Attendees (<%= Enum.count(@meeting.meeting_participants) %>)
+              </h3>
+              <%= if Enum.any?(@meeting.meeting_participants) do %>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1 -space-x-2.5 overflow-hidden">
+                    <%= for participant <- Enum.take(@meeting.meeting_participants, 8) do %>
+                      <% color = participant_color(participant.name) %>
+                      <.tooltip
+                        content={
+                          if participant.is_host do
+                            "#{participant.name || "Unknown"} (Host)"
+                          else
+                            participant.name || "Unknown"
+                          end
+                        }
+                      >
+                        <div class={"relative inline-flex shrink-0 #{color.bg}"}>
+                          <span class={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium #{color.text} ring-2 ring-background"}>
+                            {String.at(participant.name || "?", 0) |> String.upcase()}
+                          </span>
+                        </div>
+                      </.tooltip>
+                    <% end %>
+                    <%= if Enum.count(@meeting.meeting_participants) > 8 do %>
+                      <span class="flex items-center justify-center w-8 h-8 text-xs font-medium rounded-full bg-muted text-muted-foreground ring-2 ring-background shrink-0">
+                        +<%= Enum.count(@meeting.meeting_participants) - 8 %>
+                      </span>
+                    <% end %>
+                  </div>
+                  <.button
+                    variant="link"
+                    size="sm"
+                    class="h-8 text-xs"
+                    phx-click={SocialScribeWeb.UI.Dialog.show_modal("attendees-modal")}
+                  >
+                    View all
+                  </.button>
+                </div>
+              <% else %>
+                <p class="text-sm italic text-muted-foreground">No attendees</p>
+              <% end %>
+            </div>
           </div>
-          <div class="flex items-center gap-3 mt-2 flex-wrap">
-            <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <.icon name="hero-calendar-mini" class="h-3.5 w-3.5" />
-              {@meeting.recorded_at}
-            </span>
-            <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <.icon name="hero-clock-mini" class="h-3.5 w-3.5" />
-              {format_duration(@meeting.duration_seconds)}
-            </span>
-            <.link
-              href={@meeting.calendar_event.html_link || "#"}
-              target="_blank"
-              class="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
-            >
-              <.icon name="hero-arrow-top-right-on-square-mini" class="h-3 w-3" />
-              Google Calendar
-            </.link>
+          <div class="flex items-center gap-2">
+            <%= if @hubspot_credential do %>
+              <.link patch={~p"/dashboard/meetings/#{@meeting}/hubspot"}>
+                <.button class="bg-[#ff7a59] hover:bg-[#ff6a45] text-white">
+                  Update HubSpot
+                </.button>
+              </.link>
+            <% end %>
+            <%= if @crm_credentials["salesforce"] do %>
+              <.link patch={~p"/dashboard/meetings/#{@meeting}/salesforce"}>
+                <.button class="bg-[#00a1e0] hover:bg-[#0089c2] text-white">
+                  Update Salesforce
+                </.button>
+              </.link>
+            <% end %>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <.link
-            :if={@hubspot_credential}
-            patch={~p"/dashboard/meetings/#{@meeting}/hubspot"}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#ff7a59] rounded-md hover:bg-[#ff6a45] transition-colors"
-          >
-            Update HubSpot
-          </.link>
-          <.link
-            :if={@crm_credentials["salesforce"]}
-            patch={~p"/dashboard/meetings/#{@meeting}/salesforce"}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#00a1e0] rounded-md hover:bg-[#0089c2] transition-colors"
-          >
-            Update Salesforce
-          </.link>
-        </div>
-      </div>
-    </div>
+      </.card_content>
+    </.card>
   </div>
 
-  <%!-- Main Content Grid --%>
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-    <%!-- Left Column: Main content --%>
-    <div class="lg:col-span-2 space-y-5">
-      <%!-- Follow-up Email --%>
-      <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
-          <.icon name="hero-envelope" class="h-4 w-4 text-gray-400" />
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Follow-Up Email</h2>
-        </div>
-        <div class="p-5">
-          <p :if={!@meeting.follow_up_email} class="text-sm text-gray-400 dark:text-gray-500">
+  <%!-- Main Content --%>
+  <div class="space-y-4">
+    <%!-- Follow-up Email --%>
+    <.card>
+      <.card_header>
+        <.card_title class="flex items-center gap-2">
+          <.icon name="hero-envelope" class="w-5 h-5" /> Follow-Up Email
+        </.card_title>
+      </.card_header>
+      <.card_content>
+        <%= if !@meeting.follow_up_email do %>
+          <p class="text-sm text-muted-foreground">
             AI-generated follow-up email will appear here once generated.
           </p>
-
-          <.simple_form
-            :if={@meeting.follow_up_email}
+        <% else %>
+          <.form
             for={@follow_up_email_form}
             phx-change="validate-follow-up-email"
+            class="space-y-4"
           >
-            <.input
-              field={@follow_up_email_form[:follow_up_email]}
-              type="textarea"
-              value={@meeting.follow_up_email}
-            />
-
+            <.form_field>
+              <.textarea
+                field={@follow_up_email_form[:follow_up_email]}
+                value={@meeting.follow_up_email}
+                rows={6}
+              />
+            </.form_field>
             <.clipboard_button
               id="follow-up-email-button"
-              text={@follow_up_email_form[:follow_up_email].value}
+              text={@meeting.follow_up_email || ""}
             />
-          </.simple_form>
-        </div>
-      </section>
+          </.form>
+        <% end %>
+      </.card_content>
+    </.card>
 
-      <%!-- Automated Posts --%>
-      <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
-          <.icon name="hero-document-text" class="h-4 w-4 text-gray-400" />
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Automated Posts</h2>
-        </div>
-        <div class="p-5">
-          <%= cond do %>
-            <% @user_has_automations && Enum.any?(@automation_results) -> %>
-              <div class="space-y-2">
-                <div
-                  :for={result <- @automation_results}
-                  class="flex items-center justify-between py-2.5 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-                >
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {result.automation.name}
-                  </span>
-                  <.link
-                    patch={~p"/dashboard/meetings/#{@meeting}/draft_post/#{result.id}"}
-                    class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
-                  >
-                    View Draft
+    <%!-- Automated Posts --%>
+    <.card>
+      <.card_header>
+        <.card_title class="flex items-center gap-2">
+          <.icon name="hero-document-text" class="w-5 h-5" /> Automated Posts
+        </.card_title>
+      </.card_header>
+      <.card_content>
+        <%= cond do %>
+          <% @user_has_automations && Enum.any?(@automation_results) && !has_only_failed_results(@automation_results) -> %>
+            <div class="space-y-2">
+              <%= for result <- @automation_results do %>
+                <div class="flex items-center justify-between px-3 py-2 transition-colors rounded-md bg-muted hover:bg-accent">
+                  <span class="flex-1 text-sm font-medium">{result.automation.name}</span>
+                  <.link patch={~p"/dashboard/meetings/#{@meeting}/draft_post/#{result.id}"}>
+                    <.button variant="ghost" size="sm">View Draft</.button>
                   </.link>
                 </div>
-              </div>
-            <% @user_has_automations && !Enum.any?(@automation_results) -> %>
-              <p class="text-sm text-gray-400 dark:text-gray-500">No posts generated yet.</p>
-            <% !@user_has_automations -> %>
-              <p class="text-sm text-gray-400 dark:text-gray-500">No active automations.</p>
-          <% end %>
-        </div>
-      </section>
-
-      <%!-- Transcript --%>
-      <.transcript_content meeting_transcript={@meeting.meeting_transcript} />
-    </div>
-
-    <%!-- Right Column: Sidebar --%>
-    <div class="space-y-5">
-      <%!-- Attendees --%>
-      <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
-          <.icon name="hero-users" class="h-4 w-4 text-gray-400" />
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            Attendees
-            <span :if={Enum.any?(@meeting.meeting_participants)} class="text-gray-400 dark:text-gray-500 font-normal">
-              ({length(@meeting.meeting_participants)})
-            </span>
-          </h2>
-        </div>
-        <div class="p-4">
-          <%= if Enum.any?(@meeting.meeting_participants) do %>
-            <ul class="space-y-1">
-              <li
-                :for={participant <- @meeting.meeting_participants}
-                class="flex items-center justify-between py-2 px-2.5 rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+              <% end %>
+            </div>
+          <% @user_has_automations -> %>
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-muted-foreground">
+                <%= if Enum.any?(@automation_results), do: "Generation failed. Try again?", else: "No posts generated yet." %>
+              </p>
+              <.button
+                variant="outline"
+                size="sm"
+                phx-click="regenerate-automations"
+                phx-disable-with="Generating..."
+                disabled={@regenerating}
               >
-                <div class="flex items-center gap-2.5">
-                  <div class="w-7 h-7 rounded-full bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center text-xs font-medium text-brand-700 dark:text-brand-400">
-                    {String.at(participant.name || "?", 0) |> String.upcase()}
-                  </div>
-                  <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {participant.name || "Unknown"}
-                  </span>
-                </div>
-                <span
-                  :if={participant.is_host}
-                  class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400"
-                >
-                  Host
-                </span>
-              </li>
-            </ul>
-          <% else %>
-            <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No attendee data</p>
-          <% end %>
-        </div>
-      </section>
+                <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" /> Generate Posts
+              </.button>
+            </div>
+          <% !@user_has_automations -> %>
+            <p class="text-sm text-muted-foreground">No active automations.</p>
+        <% end %>
+      </.card_content>
+    </.card>
 
-      <%!-- CRM Integrations --%>
-      <section :if={@hubspot_credential || @crm_credentials["salesforce"]} class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 dark:border-[#2e2e2e] flex items-center gap-2">
-          <.icon name="hero-building-office" class="h-4 w-4 text-gray-400" />
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">CRM Actions</h2>
-        </div>
-        <div class="p-4 space-y-2">
-          <.link
-            :if={@hubspot_credential}
-            patch={~p"/dashboard/meetings/#{@meeting}/hubspot"}
-            class="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group"
-          >
-            <div class="w-8 h-8 rounded-md bg-[#ff7a59]/10 flex items-center justify-center">
-              <svg class="h-3.5 w-3.5 text-[#ff7a59]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.72 14.76c.35-.85.54-1.76.54-2.76 0-.72-.11-1.41-.3-2.05-.65.15-1.33.23-2.04.23A9.07 9.07 0 0112 9.9a8.963 8.963 0 01-4.92.28c-.2.64-.3 1.33-.3 2.05 0 1 .19 1.91.54 2.76 1.34-.5 2.75-.79 4.18-.79s2.84.29 4.22.79M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-[#ff7a59] transition-colors">Update HubSpot</p>
-              <p class="text-xs text-gray-400 dark:text-gray-500">Sync contacts from meeting</p>
-            </div>
-          </.link>
-          <.link
-            :if={@crm_credentials["salesforce"]}
-            patch={~p"/dashboard/meetings/#{@meeting}/salesforce"}
-            class="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group"
-          >
-            <div class="w-8 h-8 rounded-md bg-[#00a1e0]/10 flex items-center justify-center">
-              <svg class="h-3.5 w-3.5 text-[#00a1e0]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10.008 3.083c1.063-1.123 2.537-1.82 4.17-1.82 2.138 0 3.97 1.176 4.95 2.917.86-.378 1.8-.588 2.792-.588C24.99 3.592 27.6 6.2 27.6 9.272c0 .38-.039.75-.112 1.108 1.825.85 3.088 2.713 3.088 4.87 0 2.953-2.393 5.346-5.346 5.346H7.44c-3.396 0-6.148-2.753-6.148-6.148 0-2.78 1.845-5.13 4.377-5.894.19-2.417 1.697-4.458 3.839-5.471z" transform="scale(0.73)" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-[#00a1e0] transition-colors">Update Salesforce</p>
-              <p class="text-xs text-gray-400 dark:text-gray-500">Sync contacts from meeting</p>
-            </div>
-          </.link>
-        </div>
-      </section>
-    </div>
+    <%!-- Transcript --%>
+    <.card>
+      <.card_header>
+        <.card_title class="flex items-center gap-2">
+          <.icon name="hero-chat-bubble-bottom-center-text" class="w-5 h-5" /> Transcript
+        </.card_title>
+      </.card_header>
+      <.card_content>
+        <.transcript_content meeting_transcript={@meeting.meeting_transcript} />
+      </.card_content>
+    </.card>
   </div>
 </div>
 
-<.modal :if={@live_action == :draft_post} id="draft-post-modal" show on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}>
-  <.live_component module={SocialScribeWeb.MeetingLive.DraftPostFormComponent} id={"draft-post-#{@meeting.id}"} automation_result={@automation_result} automation={@automation} meeting={@meeting} current_user={@current_user} patch={~p"/dashboard/meetings/#{@meeting}"} />
-</.modal>
+<%= if @live_action == :draft_post do %>
+  <.dialog id="draft-post-modal" show on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}>
+    <:header>
+      <.dialog_title>View Draft Post</.dialog_title>
+    </:header>
+    <:content>
+      <.live_component
+        module={SocialScribeWeb.MeetingLive.DraftPostFormComponent}
+        id={"draft-post-#{@meeting.id}"}
+        automation_result={@automation_result}
+        automation={@automation}
+        meeting={@meeting}
+        current_user={@current_user}
+        patch={~p"/dashboard/meetings/#{@meeting}"}
+      />
+    </:content>
+  </.dialog>
+<% end %>
 
-<.hubspot_modal :if={@live_action == :hubspot && @hubspot_credential} id="hubspot-modal-wrapper" show on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}>
-  <.live_component module={SocialScribeWeb.MeetingLive.HubspotModalComponent} id="hubspot-modal" meeting={@meeting} credential={@hubspot_credential} modal_id="hubspot-modal-wrapper" />
-</.hubspot_modal>
+<%= if @live_action == :hubspot && @hubspot_credential do %>
+  <.dialog
+    id="hubspot-modal-wrapper"
+    show
+    on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
+  >
+    <:header>
+      <.dialog_title>Update HubSpot</.dialog_title>
+    </:header>
+    <:content>
+      <.live_component
+        module={SocialScribeWeb.MeetingLive.HubspotModalComponent}
+        id="hubspot-modal"
+        meeting={@meeting}
+        credential={@hubspot_credential}
+        modal_id="hubspot-modal-wrapper"
+      />
+    </:content>
+  </.dialog>
+<% end %>
 
-<.hubspot_modal :if={@live_action == :salesforce && @crm_credentials["salesforce"]} id="crm-modal-salesforce-wrapper" show on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}>
-  <.live_component module={SocialScribeWeb.MeetingLive.CrmModalComponent} id="crm-modal-salesforce" meeting={@meeting} credential={@crm_credentials["salesforce"]} provider="salesforce" modal_id="crm-modal-salesforce-wrapper" />
-</.hubspot_modal>
+<%= if @live_action == :salesforce && @crm_credentials["salesforce"] do %>
+  <.dialog
+    id="crm-modal-salesforce-wrapper"
+    show
+    on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
+  >
+    <:header>
+      <.dialog_title>Update Salesforce</.dialog_title>
+    </:header>
+    <:content>
+      <.live_component
+        module={SocialScribeWeb.MeetingLive.CrmModalComponent}
+        id="crm-modal-salesforce"
+        meeting={@meeting}
+        credential={@crm_credentials["salesforce"]}
+        provider="salesforce"
+        modal_id="crm-modal-salesforce-wrapper"
+      />
+    </:content>
+  </.dialog>
+<% end %>
+
+<.dialog
+  id="attendees-modal"
+  show={false}
+  on_cancel={SocialScribeWeb.UI.Dialog.hide_modal("attendees-modal")}
+>
+  <:header>
+    <.dialog_title>Attendees (<%= Enum.count(@meeting.meeting_participants) %>)</.dialog_title>
+  </:header>
+  <:content>
+    <%= if Enum.any?(@meeting.meeting_participants) do %>
+      <ul class="mt-4 space-y-2 overflow-y-auto max-h-96">
+        <%= for participant <- @meeting.meeting_participants do %>
+          <% color = participant_color(participant.name) %>
+          <li class="flex items-center justify-between gap-3 px-3 py-2 rounded-md bg-muted/50">
+            <div class="flex items-center min-w-0 gap-3">
+              <div class={"relative inline-flex shrink-0 #{color.bg}"}>
+                <span class={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium #{color.text}"}>
+                  {String.at(participant.name || "?", 0) |> String.upcase()}
+                </span>
+              </div>
+              <span class={"text-sm truncate #{color.text}"}>{participant.name || "Unknown"}</span>
+            </div>
+            <%= if participant.is_host do %>
+              <.badge variant="outline" class="text-xs shrink-0">Host</.badge>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="py-4 text-sm text-center text-muted-foreground">No attendees</p>
+    <% end %>
+  </:content>
+</.dialog>

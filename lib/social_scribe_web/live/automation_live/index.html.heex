@@ -1,54 +1,146 @@
-<div class="space-y-6">
+<div class="space-y-4">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">Automations</h1>
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">Automations</h1>
+      <p class="text-muted-foreground">
+        Create and manage automated content generation.
+      </p>
+    </div>
     <.link patch={~p"/dashboard/automations/new"}>
       <.button>
-        <.icon name="hero-plus-mini" class="h-3.5 w-3.5 mr-1" />
-        New Automation
+        <.icon name="hero-plus" class="w-4 h-4 mr-2" /> New Automation
       </.button>
     </.link>
   </div>
 
-  <div class="space-y-3">
-    <div :if={Enum.empty?(@automations)} class="text-center py-16 bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e]">
-      <.icon name="hero-rocket-launch" class="h-8 w-8 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-      <p class="text-sm font-medium text-gray-600 dark:text-gray-400">No automations yet</p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Create one to start generating content automatically</p>
-    </div>
-
-    <div
-      :for={automation <- @automations}
-      id={"automations-#{automation.id}"}
-      class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] hover:border-brand-300 dark:hover:border-brand-800 transition-all duration-150"
-    >
-      <div class="p-4">
-        <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
-          <.link navigate={~p"/dashboard/automations/#{automation}"} class="min-w-0 flex-1 group">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-              {automation.name}
-            </h3>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{automation.platform}</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1.5 line-clamp-2">{automation.description |> String.replace("\n", " ")}</p>
-          </.link>
-          <div class="flex-shrink-0 space-y-2.5">
-            <div class="flex items-center gap-2.5">
-              <span class="text-xs text-gray-500 dark:text-gray-400">Active</span>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" class="sr-only peer" checked={automation.is_active} phx-click="toggle_automation" phx-value-id={automation.id} />
-                <div class="w-9 h-5 bg-gray-200 dark:bg-[#2e2e2e] rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:shadow-sm after:transition-all peer-checked:bg-brand-500 transition-colors"></div>
-              </label>
-            </div>
-            <div class="flex items-center gap-2.5">
-              <.link patch={~p"/dashboard/automations/#{automation}/edit"} class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">Edit</.link>
-              <.link phx-click={JS.push("delete", value: %{id: automation.id}) |> hide("#automations-#{automation.id}")} data-confirm="Are you sure?" class="text-xs font-medium text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors">Delete</.link>
-            </div>
+  <%= if Enum.empty?(@automations) do %>
+    <.card>
+      <.card_content class="pt-6">
+        <div class="flex flex-col items-center justify-center py-12 text-center">
+          <div class="p-3 mb-4 rounded-full bg-muted">
+            <.icon name="hero-rocket-launch" class="w-6 h-6 text-muted-foreground" />
           </div>
+          <h3 class="mb-1 font-semibold text-foreground">No automations yet</h3>
+          <p class="text-sm text-muted-foreground">
+            Create one to start generating content automatically
+          </p>
         </div>
-      </div>
+      </.card_content>
+    </.card>
+  <% end %>
+
+  <%= if not Enum.empty?(@automations) do %>
+    <div class="space-y-3">
+      <%= for automation <- @automations do %>
+        <.card id={"automations-#{automation.id}"} class="overflow-hidden">
+          <div class="flex items-stretch">
+            <!-- Icon/Sidebar -->
+            <div class="w-1.5 bg-muted/30" class={
+              if automation.is_active, do: "bg-primary", else: "bg-muted/30"
+            }></div>
+
+            <.card_content class="flex-1 p-6">
+              <div class="flex items-start gap-6">
+                <!-- Left: Main Content -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 rounded-md bg-muted">
+                      <.icon
+                        name={case automation.platform do
+                          "linkedin" -> "hero-linkedin"
+                          "facebook" -> "hero-facebook"
+                          "twitter" -> "hero-x"
+                          _ -> "hero-rocket-launch"
+                        end}
+                        class="w-4 h-4"
+                      />
+                    </div>
+                    <.badge variant="outline" class="text-xs font-normal">
+                      {automation.platform}
+                    </.badge>
+                    <.status_badge
+                      status={if automation.is_active, do: "active", else: "inactive"}
+                      class="ml-auto"
+                    >
+                      {if automation.is_active, do: "Active", else: "Paused"}
+                    </.status_badge>
+                  </div>
+
+                  <.link navigate={~p"/dashboard/automations/#{automation}"} class="block group mb-2">
+                    <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {automation.name}
+                    </h3>
+                  </.link>
+
+                  <p class="text-muted-foreground mb-4">
+                    {automation.description}
+                  </p>
+
+                  <!-- Example Section -->
+                  <div class="p-4 rounded-lg bg-muted/50">
+                    <p class="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
+                      Example output
+                    </p>
+                    <p class="text-sm text-foreground/80 italic">
+                      {automation.example}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Right: Actions & Toggle -->
+                <div class="flex flex-col items-end gap-4 pt-1">
+                  <.switch
+                    name="automation_#{automation.id}"
+                    checked={automation.is_active}
+                    phx-click="toggle_automation"
+                    phx-value-id={automation.id}
+                  />
+
+                  <div class="flex items-center gap-2">
+                    <.link patch={~p"/dashboard/automations/#{automation}/edit"}>
+                      <.button variant="ghost" size="sm">
+                        <.icon name="hero-pencil" class="w-4 h-4 mr-1.5" />
+                        Edit
+                      </.button>
+                    </.link>
+                    <.link
+                      phx-click={
+                        JS.push("delete", value: %{id: automation.id})
+                        |> JS.hide(to: "#automations-#{automation.id}")
+                      }
+                      data-confirm="Are you sure you want to delete this automation?"
+                    >
+                      <.button variant="ghost" size="sm" class="text-destructive hover:text-destructive">
+                        <.icon name="hero-trash" class="w-4 h-4 mr-1.5" />
+                        Delete
+                      </.button>
+                    </.link>
+                  </div>
+                </div>
+              </div>
+            </.card_content>
+          </div>
+        </.card>
+      <% end %>
     </div>
-  </div>
+  <% end %>
 </div>
 
-<.modal :if={@live_action in [:new, :edit]} id="automation-modal" show on_cancel={JS.patch(~p"/dashboard/automations")}>
-  <.live_component module={SocialScribeWeb.AutomationLive.FormComponent} id={@automation.id || :new} title={@page_title} action={@live_action} automation={@automation} current_user={@current_user} patch={~p"/dashboard/automations"} />
-</.modal>
+<%= if @live_action in [:new, :edit] do %>
+  <.dialog id="automation-modal" show on_cancel={JS.patch(~p"/dashboard/automations")}>
+    <:header>
+      <.dialog_title>{@page_title}</.dialog_title>
+    </:header>
+    <:content>
+      <.live_component
+        module={SocialScribeWeb.AutomationLive.FormComponent}
+        id={@automation.id || :new}
+        title={@page_title}
+        action={@live_action}
+        automation={@automation}
+        current_user={@current_user}
+        patch={~p"/dashboard/automations"}
+      />
+    </:content>
+  </.dialog>
+<% end %>

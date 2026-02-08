@@ -87,8 +87,8 @@ defmodule SocialScribeWeb do
 
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
-      import SocialScribeWeb.CoreComponents
+      # New shadcn/ui-style components
+      use SocialScribeWeb.UI
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

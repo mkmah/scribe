@@ -11,22 +11,27 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
     ~H"""
     <div class="space-y-6">
       <div>
-        <h2 id={"#{@modal_id}-title"} class="text-xl font-medium tracking-tight text-slate-900">Update in HubSpot</h2>
-        <p id={"#{@modal_id}-description"} class="mt-2 text-base font-light leading-7 text-slate-500">
+        <h2 id={"#{@modal_id}-title"} class="text-xl font-medium tracking-tight text-content-primary">
+          Update in HubSpot
+        </h2>
+        <p
+          id={"#{@modal_id}-description"}
+          class="mt-2 text-base font-light leading-7 text-content-tertiary"
+        >
           Here are suggested updates to sync with your integrations based on this
           <span class="block">meeting</span>
         </p>
       </div>
 
       <.contact_select
-          selected_contact={@selected_contact}
-          contacts={@contacts}
-          loading={@searching}
-          open={@dropdown_open}
-          query={@query}
-          target={@myself}
-          error={@error}
-        />
+        selected_contact={@selected_contact}
+        contacts={@contacts}
+        loading={@searching}
+        open={@dropdown_open}
+        query={@query}
+        target={@myself}
+        error={@error}
+      />
 
       <%= if @selected_contact do %>
         <.suggestions_section
@@ -51,7 +56,7 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
     ~H"""
     <div class="space-y-4">
       <%= if @loading do %>
-        <div class="text-center py-8 text-slate-500">
+        <div class="text-center py-8 text-content-tertiary">
           <.icon name="hero-arrow-path" class="h-6 w-6 animate-spin mx-auto mb-2" />
           <p>Generating suggestions...</p>
         </div>
@@ -102,7 +107,8 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
     {:ok, socket}
   end
 
-  defp maybe_select_all_suggestions(socket, %{suggestions: suggestions}) when is_list(suggestions) do
+  defp maybe_select_all_suggestions(socket, %{suggestions: suggestions})
+       when is_list(suggestions) do
     assign(socket, suggestions: Enum.map(suggestions, &Map.put(&1, :apply, true)))
   end
 
@@ -138,7 +144,10 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
     else
       # When opening dropdown with selected contact, search for similar contacts
       socket = assign(socket, dropdown_open: true, searching: true)
-      query = "#{socket.assigns.selected_contact.firstname} #{socket.assigns.selected_contact.lastname}"
+
+      query =
+        "#{socket.assigns.selected_contact.firstname} #{socket.assigns.selected_contact.lastname}"
+
       send(self(), {:hubspot_search, query, socket.assigns.credential})
       {:noreply, socket}
     end
@@ -149,15 +158,21 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
     contact = Enum.find(socket.assigns.contacts, &(&1.id == contact_id))
 
     if contact do
-      socket = assign(socket,
-        loading: true,
-        selected_contact: contact,
-        error: nil,
-        dropdown_open: false,
-        query: "",
-        suggestions: []
+      socket =
+        assign(socket,
+          loading: true,
+          selected_contact: contact,
+          error: nil,
+          dropdown_open: false,
+          query: "",
+          suggestions: []
+        )
+
+      send(
+        self(),
+        {:generate_suggestions, contact, socket.assigns.meeting, socket.assigns.credential}
       )
-      send(self(), {:generate_suggestions, contact, socket.assigns.meeting, socket.assigns.credential})
+
       {:noreply, socket}
     else
       {:noreply, assign(socket, error: "Contact not found")}
@@ -213,7 +228,12 @@ defmodule SocialScribeWeb.MeetingLive.HubspotModalComponent do
         Map.put(acc, field, Map.get(values, field, ""))
       end)
 
-    send(self(), {:apply_hubspot_updates, updates, socket.assigns.selected_contact, socket.assigns.credential})
+    send(
+      self(),
+      {:apply_hubspot_updates, updates, socket.assigns.selected_contact,
+       socket.assigns.credential}
+    )
+
     {:noreply, socket}
   end
 

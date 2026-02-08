@@ -95,7 +95,10 @@ defmodule Ueberauth.Strategy.Salesforce.OAuth do
 
     token_url = "#{c.site}/services/oauth2/token"
     Logger.info("Salesforce PKCE token exchange: POST #{token_url}")
-    Logger.debug("Salesforce PKCE params: client_id=#{String.slice(c.client_id || "", 0..10)}..., client_secret_present=#{c.client_secret not in [nil, ""]}, redirect_uri=#{c.redirect_uri}")
+
+    Logger.debug(
+      "Salesforce PKCE params: client_id=#{String.slice(c.client_id || "", 0..10)}..., client_secret_present=#{c.client_secret not in [nil, ""]}, redirect_uri=#{c.redirect_uri}"
+    )
 
     headers = [
       {"content-type", "application/x-www-form-urlencoded"},

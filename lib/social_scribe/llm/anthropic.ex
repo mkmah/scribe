@@ -72,7 +72,7 @@ defmodule SocialScribe.LLM.Anthropic do
       {Tesla.Middleware.Headers,
        [
          {"x-api-key", auth_token},
-        #  {"anthropic-version", @anthropic_version},
+         #  {"anthropic-version", @anthropic_version},
          {"content-type", "application/json"}
        ]}
     ])

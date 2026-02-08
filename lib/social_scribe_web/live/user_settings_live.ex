@@ -1,6 +1,8 @@
 defmodule SocialScribeWeb.UserSettingsLive do
   use SocialScribeWeb, :live_view
 
+  import SocialScribeWeb.Components.IntegrationCard, only: [integration_card: 1]
+
   alias SocialScribe.Accounts
   alias SocialScribe.Bots
 
@@ -155,5 +157,106 @@ defmodule SocialScribeWeb.UserSettingsLive do
       bot_preference ->
         Bots.update_user_bot_preference(bot_preference, params)
     end
+  end
+
+  def timezone_options do
+    [
+      {"Americas",
+       [
+         {"America/New_York (EST/EDT)", "America/New_York"},
+         {"America/Chicago (CST/CDT)", "America/Chicago"},
+         {"America/Denver (MST/MDT)", "America/Denver"},
+         {"America/Los_Angeles (PST/PDT)", "America/Los_Angeles"},
+         {"America/Anchorage (AKST)", "America/Anchorage"},
+         {"America/Sao_Paulo (BRT)", "America/Sao_Paulo"},
+         {"America/Buenos_Aires (ART)", "America/Argentina/Buenos_Aires"},
+         {"America/Toronto (EST/EDT)", "America/Toronto"},
+         {"America/Vancouver (PST/PDT)", "America/Vancouver"}
+       ]},
+      {"Europe",
+       [
+         {"Europe/London (GMT/BST)", "Europe/London"},
+         {"Europe/Berlin (CET/CEST)", "Europe/Berlin"},
+         {"Europe/Paris (CET/CEST)", "Europe/Paris"},
+         {"Europe/Amsterdam (CET/CEST)", "Europe/Amsterdam"},
+         {"Europe/Zurich (CET/CEST)", "Europe/Zurich"},
+         {"Europe/Moscow (MSK)", "Europe/Moscow"},
+         {"Europe/Istanbul (TRT)", "Europe/Istanbul"}
+       ]},
+      {"Asia & Pacific",
+       [
+         {"Asia/Dubai (GST)", "Asia/Dubai"},
+         {"Asia/Kolkata (IST)", "Asia/Kolkata"},
+         {"Asia/Shanghai (CST)", "Asia/Shanghai"},
+         {"Asia/Tokyo (JST)", "Asia/Tokyo"},
+         {"Asia/Singapore (SGT)", "Asia/Singapore"},
+         {"Asia/Seoul (KST)", "Asia/Seoul"},
+         {"Australia/Sydney (AEST/AEDT)", "Australia/Sydney"},
+         {"Pacific/Auckland (NZST/NZDT)", "Pacific/Auckland"},
+         {"Pacific/Honolulu (HST)", "Pacific/Honolulu"}
+       ]},
+      {"Africa",
+       [
+         {"Africa/Cairo (EET)", "Africa/Cairo"},
+         {"Africa/Lagos (WAT)", "Africa/Lagos"},
+         {"Africa/Johannesburg (SAST)", "Africa/Johannesburg"},
+         {"Africa/Nairobi (EAT)", "Africa/Nairobi"}
+       ]}
+    ]
+  end
+
+  attr :name, :string, required: true
+  attr :description, :string, required: true
+  attr :accounts, :list, default: []
+  attr :icon, :atom, required: true
+  attr :connect_path, :string, required: true
+  attr :disconnect_confirm_message, :string, default: "Are you sure you want to disconnect this account?"
+  attr :show_action_when_connected, :boolean, default: true
+  slot :extra_actions
+
+  def integration_section(assigns) do
+    ~H"""
+    <.integration_card
+      name={@name}
+      description={@description}
+      connected={not Enum.empty?(@accounts)}
+      icon={@icon}
+    >
+      <:connection_list :if={not Enum.empty?(@accounts)}>
+        <%= for account <- @accounts do %>
+          <div class="flex items-center justify-between px-3 py-2 rounded-md bg-muted">
+            <p class="text-sm"><%= account.email || account.uid %></p>
+            <div class="flex items-center gap-2">
+              <%= render_slot(@extra_actions, account) %>
+
+              <.icon_button
+                variant="destructive"
+                size="xs"
+                phx-click="disconnect_account"
+                phx-value-id={account.id}
+                data-confirm={@disconnect_confirm_message}
+              >
+                <.trash class="w-2 h-2" />
+              </.icon_button>
+            </div>
+          </div>
+        <% end %>
+      </:connection_list>
+
+      <:action
+        :if={
+          Enum.empty?(@accounts) or
+            @show_action_when_connected
+        }
+      >
+        <.link href={@connect_path}>
+          <.button variant="outline" size="sm">
+            <.icon name="hero-plus" class="w-4 h-4 mr-1" />
+            {if Enum.empty?(@accounts), do: "Connect #{@name}", else: "Connect another #{@name}"}
+          </.button>
+        </.link>
+      </:action>
+    </.integration_card>
+    """
   end
 end

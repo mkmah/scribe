@@ -19,16 +19,13 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     assigns = assign(assigns, :provider_label, provider_label)
 
     ~H"""
-    <div class="space-y-6">
-      <div>
-        <h2 id={"#{@modal_id}-title"} class="text-xl font-medium tracking-tight text-slate-900">
-          Update in {@provider_label}
-        </h2>
-        <p id={"#{@modal_id}-description"} class="mt-2 text-base font-light leading-7 text-slate-500">
-          Here are suggested updates to sync with your integrations based on this
-          <span class="block">meeting</span>
-        </p>
-      </div>
+    <div class="space-y-4">
+      <p
+        id={"#{@modal_id}-description"}
+        class="mt-2 text-sm font-light leading-6 text-content-tertiary"
+      >
+        Here are suggested updates to sync with your integrations based on this meeting
+      </p>
 
       <.contact_select
         selected_contact={@selected_contact}
@@ -65,8 +62,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     ~H"""
     <div class="space-y-4">
       <%= if @loading do %>
-        <div class="text-center py-8 text-slate-500">
-          <.icon name="hero-arrow-path" class="h-6 w-6 animate-spin mx-auto mb-2" />
+        <div class="py-8 text-center text-content-tertiary">
+          <.icon name="hero-arrow-path" class="w-6 h-6 mx-auto mb-2 animate-spin" />
           <p>Generating suggestions...</p>
         </div>
       <% else %>

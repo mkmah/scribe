@@ -1,492 +1,204 @@
-<div class="space-y-8">
+<div class="space-y-4">
+  <%!-- Header --%>
   <div>
-    <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
-      Settings
-    </h1>
-    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-      Manage your preferences and connected accounts.
-    </p>
+    <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+    <p class="text-muted-foreground">Manage your preferences and connected accounts.</p>
   </div>
 
   <%!-- Preferences --%>
-  <section class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 dark:border-[#2e2e2e]">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-md bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center">
-          <.icon name="hero-cog-6-tooth" class="h-4 w-4 text-brand-600 dark:text-brand-400" />
-        </div>
-        <div>
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Preferences</h2>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Bot settings and display configuration</p>
-        </div>
-      </div>
-    </div>
-
-    <.form
-      for={@user_bot_preference_form}
-      phx-change="validate_user_bot_preference"
-      phx-submit="update_user_bot_preference"
-    >
-      <%!-- Bot Join Offset --%>
-      <div class="px-6 py-5 border-b border-gray-100 dark:border-[#2e2e2e]">
-        <div class="flex items-start justify-between gap-8">
-          <div class="flex-shrink-0">
-            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Bot Join Offset</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">How many minutes before the meeting starts should the bot join</p>
+  <.card>
+    <.card_header>
+      <.card_title class="flex items-center gap-2">
+        <.settings class="w-5 h-5" /> Preferences
+      </.card_title>
+      <.card_description>Bot settings and display configuration</.card_description>
+    </.card_header>
+    <.card_content>
+      <.form
+        for={@user_bot_preference_form}
+        phx-change="validate_user_bot_preference"
+        phx-submit="update_user_bot_preference"
+        class="space-y-4"
+      >
+        <%!-- Bot Join Offset --%>
+        <div class="flex items-start justify-between gap-6">
+          <div class="space-y-1">
+            <h3 class="text-sm font-medium">Bot Join Offset</h3>
+            <p class="text-xs text-muted-foreground">
+              How many minutes before the meeting starts should the bot join
+            </p>
           </div>
-          <div class="w-24 flex-shrink-0">
-            <.input
-              field={@user_bot_preference_form[:join_minute_offset]}
-              type="number"
-              value={Map.get(@user_bot_preference, :join_minute_offset, 2)}
-            />
-          </div>
-        </div>
-      </div>
-
-      <%!-- Timezone --%>
-      <div class="px-6 py-5 border-b border-gray-100 dark:border-[#2e2e2e]" id="timezone-settings" phx-hook="TimezoneDetect">
-        <div class="space-y-4">
-          <div>
-            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Timezone</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Used for displaying meeting times and scheduling</p>
-          </div>
-          <div class="flex items-center gap-3">
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                id="tz-browser-toggle"
-                class="sr-only peer"
-                checked={@timezone_mode == "browser"}
-                phx-click="toggle_timezone_mode"
+          <div class="flex-shrink-0 w-24">
+            <.form_field>
+              <.input
+                type="number"
+                field={@user_bot_preference_form[:join_minute_offset]}
+                value={Map.get(@user_bot_preference, :join_minute_offset, 2)}
               />
-              <div class="w-9 h-5 bg-gray-200 dark:bg-[#2e2e2e] peer-focus:ring-2 peer-focus:ring-brand-500/20 rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:bg-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-gray-300 dark:after:border-gray-600 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
-            </label>
-            <div>
-              <span class="text-sm text-gray-700 dark:text-gray-300">Use browser timezone</span>
-              <p class="text-xs text-gray-400 dark:text-gray-500">
-                Detected: <span data-detected-tz class="font-medium text-gray-600 dark:text-gray-300">—</span>
-              </p>
-            </div>
-          </div>
-          <div class={["transition-all duration-200", if(@timezone_mode == "browser", do: "opacity-40 pointer-events-none", else: "")]}>
-            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Select timezone</label>
-            <select
-              id="tz-select"
-              phx-change="update_timezone"
-              name="timezone"
-              class="w-full text-sm rounded-md border border-gray-200 dark:border-[#2e2e2e] bg-white dark:bg-[#1c1c1c] text-gray-900 dark:text-gray-100 focus:border-brand-500 focus:ring-brand-500 py-2 px-3 cursor-pointer"
-            >
-              <optgroup label="Americas">
-                <option value="America/New_York" selected={@selected_timezone == "America/New_York"}>America/New_York (EST/EDT)</option>
-                <option value="America/Chicago" selected={@selected_timezone == "America/Chicago"}>America/Chicago (CST/CDT)</option>
-                <option value="America/Denver" selected={@selected_timezone == "America/Denver"}>America/Denver (MST/MDT)</option>
-                <option value="America/Los_Angeles" selected={@selected_timezone == "America/Los_Angeles"}>America/Los_Angeles (PST/PDT)</option>
-                <option value="America/Anchorage" selected={@selected_timezone == "America/Anchorage"}>America/Anchorage (AKST)</option>
-                <option value="America/Sao_Paulo" selected={@selected_timezone == "America/Sao_Paulo"}>America/Sao_Paulo (BRT)</option>
-                <option value="America/Argentina/Buenos_Aires" selected={@selected_timezone == "America/Argentina/Buenos_Aires"}>America/Buenos_Aires (ART)</option>
-                <option value="America/Toronto" selected={@selected_timezone == "America/Toronto"}>America/Toronto (EST/EDT)</option>
-                <option value="America/Vancouver" selected={@selected_timezone == "America/Vancouver"}>America/Vancouver (PST/PDT)</option>
-              </optgroup>
-              <optgroup label="Europe">
-                <option value="Europe/London" selected={@selected_timezone == "Europe/London"}>Europe/London (GMT/BST)</option>
-                <option value="Europe/Berlin" selected={@selected_timezone == "Europe/Berlin"}>Europe/Berlin (CET/CEST)</option>
-                <option value="Europe/Paris" selected={@selected_timezone == "Europe/Paris"}>Europe/Paris (CET/CEST)</option>
-                <option value="Europe/Amsterdam" selected={@selected_timezone == "Europe/Amsterdam"}>Europe/Amsterdam (CET/CEST)</option>
-                <option value="Europe/Zurich" selected={@selected_timezone == "Europe/Zurich"}>Europe/Zurich (CET/CEST)</option>
-                <option value="Europe/Moscow" selected={@selected_timezone == "Europe/Moscow"}>Europe/Moscow (MSK)</option>
-                <option value="Europe/Istanbul" selected={@selected_timezone == "Europe/Istanbul"}>Europe/Istanbul (TRT)</option>
-              </optgroup>
-              <optgroup label="Asia & Pacific">
-                <option value="Asia/Dubai" selected={@selected_timezone == "Asia/Dubai"}>Asia/Dubai (GST)</option>
-                <option value="Asia/Kolkata" selected={@selected_timezone == "Asia/Kolkata"}>Asia/Kolkata (IST)</option>
-                <option value="Asia/Shanghai" selected={@selected_timezone == "Asia/Shanghai"}>Asia/Shanghai (CST)</option>
-                <option value="Asia/Tokyo" selected={@selected_timezone == "Asia/Tokyo"}>Asia/Tokyo (JST)</option>
-                <option value="Asia/Singapore" selected={@selected_timezone == "Asia/Singapore"}>Asia/Singapore (SGT)</option>
-                <option value="Asia/Seoul" selected={@selected_timezone == "Asia/Seoul"}>Asia/Seoul (KST)</option>
-                <option value="Australia/Sydney" selected={@selected_timezone == "Australia/Sydney"}>Australia/Sydney (AEST/AEDT)</option>
-                <option value="Pacific/Auckland" selected={@selected_timezone == "Pacific/Auckland"}>Pacific/Auckland (NZST/NZDT)</option>
-                <option value="Pacific/Honolulu" selected={@selected_timezone == "Pacific/Honolulu"}>Pacific/Honolulu (HST)</option>
-              </optgroup>
-              <optgroup label="Africa">
-                <option value="Africa/Cairo" selected={@selected_timezone == "Africa/Cairo"}>Africa/Cairo (EET)</option>
-                <option value="Africa/Lagos" selected={@selected_timezone == "Africa/Lagos"}>Africa/Lagos (WAT)</option>
-                <option value="Africa/Johannesburg" selected={@selected_timezone == "Africa/Johannesburg"}>Africa/Johannesburg (SAST)</option>
-                <option value="Africa/Nairobi" selected={@selected_timezone == "Africa/Nairobi"}>Africa/Nairobi (EAT)</option>
-              </optgroup>
-            </select>
+            </.form_field>
           </div>
         </div>
-      </div>
 
-      <%!-- Save Button --%>
-      <div class="px-6 py-4 bg-gray-50/50 dark:bg-[#1c1c1c]/50">
-        <div class="flex justify-end">
-          <.button type="submit" phx-disable-with="Saving..." class="cursor-pointer">Save Changes</.button>
-        </div>
-      </div>
-    </.form>
-  </section>
+        <.separator />
 
-  <%!-- Calendar & Meetings --%>
-  <section>
-    <div class="mb-4 flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-md bg-accent-400/10 dark:bg-accent-400/20 flex items-center justify-center">
-        <.icon name="hero-calendar-days" class="h-4 w-4 text-accent-500 dark:text-accent-400" />
-      </div>
-      <div>
-        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Calendar & Meetings</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Calendar access for meeting detection</p>
-      </div>
-    </div>
-
-    <div class="space-y-3">
-      <%!-- Google --%>
-      <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-md bg-white dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#2e2e2e] flex items-center justify-center">
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3">
-                <path d="M533.5 278.4c0-18.5-1.5-37.1-4.7-55.3H272.1v104.8h147c-6.1 33.8-25.7 63.7-54.4 82.7v68h87.7c51.5-47.4 81.1-117.4 81.1-200.2z" fill="#4285f4" />
-                <path d="M272.1 544.3c73.4 0 135.3-24.1 180.4-65.7l-87.7-68c-24.4 16.6-55.9 26-92.6 26-71 0-131.2-47.9-152.8-112.3H28.9v70.1c46.2 91.9 140.3 149.9 243.2 149.9z" fill="#34a853" />
-                <path d="M119.3 324.3c-11.4-33.8-11.4-70.4 0-104.2V150H28.9c-38.6 76.9-38.6 167.5 0 244.4l90.4-70.1z" fill="#fbbc04" />
-                <path d="M272.1 107.7c38.8-.6 76.3 14 104.4 40.8l77.7-77.7C405 24.6 339.7-.8 272.1 0 169.2 0 75.1 58 28.9 150l90.4 70.1c21.5-64.5 81.8-112.4 152.8-112.4z" fill="#ea4335" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Google Calendar</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Sync meetings from Google Calendar</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= if not Enum.empty?(@google_accounts) do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                {length(@google_accounts)} connected
-              </span>
-            <% else %>
-              <span class="text-xs text-gray-400 dark:text-gray-500">Not connected</span>
-            <% end %>
-          </div>
-        </div>
-        <%= if not Enum.empty?(@google_accounts) do %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3 space-y-2">
-            <div
-              :for={account <- @google_accounts}
-              class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-            >
-              <div>
-                <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  {account.uid}
-                  <%= if account.email do %>
-                    <span class="text-gray-400 dark:text-gray-500">({account.email})</span>
-                  <% end %>
+        <%!-- Timezone --%>
+        <div id="timezone-settings" phx-hook="TimezoneDetect">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <h3 class="text-sm font-medium">Timezone</h3>
+                <p class="text-xs text-muted-foreground">
+                  Used for displaying meeting times and scheduling
                 </p>
               </div>
-              <button
-                phx-click="disconnect_account"
-                phx-value-id={account.id}
-                data-confirm="Are you sure you want to disconnect this Google account?"
-                class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors cursor-pointer"
+              <.switch
+                name="tz_browser_toggle"
+                id="tz-browser-toggle"
+                checked={@timezone_mode == "browser"}
+                phx-click="toggle_timezone_mode"
               >
-                <.icon name="hero-trash-mini" class="h-3 w-3" />
-                Remove
-              </button>
+                <:label>Use browser timezone</:label>
+              </.switch>
+            </div>
+            <div class={[
+              "transition-all duration-200",
+              if(@timezone_mode == "browser", do: "opacity-40 pointer-events-none", else: "")
+            ]}>
+              <.form_field label="Select timezone">
+                <.select
+                  id="tz-select"
+                  phx-change="update_timezone"
+                  name="timezone"
+                  options={timezone_options()}
+                  value={@selected_timezone}
+                />
+              </.form_field>
             </div>
           </div>
-        <% end %>
-        <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3">
-          <.link
-            href={~p"/auth/google?prompt=select_account%20consent"}
-            method="get"
-            class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer"
-          >
-            <.icon name="hero-plus-mini" class="h-3.5 w-3.5" />
-            Connect Google Account
-          </.link>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <%!-- CRM Integrations --%>
-  <section>
-    <div class="mb-4 flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-md bg-[#ff7a59]/10 flex items-center justify-center">
-        <.icon name="hero-building-office" class="h-4 w-4 text-[#ff7a59]" />
-      </div>
-      <div>
-        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">CRM Integrations</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Sync meeting data with your CRM platforms</p>
-      </div>
-    </div>
+        <.separator />
 
-    <div class="space-y-3">
-      <%!-- HubSpot --%>
-      <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-md bg-[#ff7a59]/10 flex items-center justify-center">
-              <svg class="h-4 w-4 text-[#ff7a59]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.984v-.066A2.2 2.2 0 0017.231.834h-.066a2.2 2.2 0 00-2.2 2.2v.066c0 .873.517 1.626 1.267 1.984V7.93a6.152 6.152 0 00-3.267 1.643l-6.6-5.133a2.726 2.726 0 00.067-.582A2.726 2.726 0 003.706 1.13a2.726 2.726 0 00-2.726 2.727 2.726 2.726 0 002.726 2.727c.483 0 .938-.126 1.333-.347l6.486 5.047a6.195 6.195 0 00-.556 2.572 6.18 6.18 0 00.56 2.572l-1.57 1.223a2.457 2.457 0 00-1.49-.504 2.468 2.468 0 00-2.468 2.468 2.468 2.468 0 002.468 2.468 2.468 2.468 0 002.468-2.468c0-.29-.05-.568-.142-.826l1.558-1.213a6.2 6.2 0 003.812 1.312 6.2 6.2 0 006.199-6.2 6.2 6.2 0 00-4.2-5.856zm-4.2 9.193a3.337 3.337 0 110-6.674 3.337 3.337 0 010 6.674z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">HubSpot</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Contacts, deals & meeting notes</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= if not Enum.empty?(@hubspot_accounts) do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                {length(@hubspot_accounts)} connected
-              </span>
-            <% else %>
-              <span class="text-xs text-gray-400 dark:text-gray-500">Not connected</span>
-            <% end %>
-          </div>
+        <%!-- Save Button --%>
+        <div class="flex justify-end">
+          <.button type="submit" phx-disable-with="Saving...">
+            Save Changes
+          </.button>
         </div>
-        <%= if not Enum.empty?(@hubspot_accounts) do %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3 space-y-2">
-            <div
-              :for={account <- @hubspot_accounts}
-              class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-            >
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {account.uid}<%= if account.email do %> <span class="text-gray-400 dark:text-gray-500">({account.email})</span><% end %>
-              </p>
-              <button
-                phx-click="disconnect_account"
-                phx-value-id={account.id}
-                data-confirm="Are you sure you want to disconnect this HubSpot account?"
-                class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors cursor-pointer"
-              >
-                <.icon name="hero-trash-mini" class="h-3 w-3" />
-                Remove
-              </button>
-            </div>
-          </div>
-        <% end %>
-        <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3">
-          <.link
-            href={~p"/auth/hubspot"}
-            method="get"
-            class="inline-flex items-center gap-1.5 text-xs font-medium text-[#ff7a59] hover:text-[#ff6a45] transition-colors cursor-pointer"
-          >
-            <.icon name="hero-plus-mini" class="h-3.5 w-3.5" />
-            <%= if Enum.empty?(@hubspot_accounts), do: "Connect HubSpot", else: "Connect another HubSpot" %>
-          </.link>
-        </div>
-      </div>
+      </.form>
+    </.card_content>
+  </.card>
 
-      <%!-- Salesforce --%>
-      <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-md bg-[#00a1e0]/10 flex items-center justify-center">
-              <svg class="h-4 w-4 text-[#00a1e0]" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10.008 3.083c1.063-1.123 2.537-1.82 4.17-1.82 2.138 0 3.97 1.176 4.95 2.917.86-.378 1.8-.588 2.792-.588C24.99 3.592 27.6 6.2 27.6 9.272c0 .38-.039.75-.112 1.108 1.825.85 3.088 2.713 3.088 4.87 0 2.953-2.393 5.346-5.346 5.346H7.44c-3.396 0-6.148-2.753-6.148-6.148 0-2.78 1.845-5.13 4.377-5.894.19-2.417 1.697-4.458 3.839-5.471z" transform="scale(0.73)" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Salesforce</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Contacts, opportunities & notes</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= if not Enum.empty?(@salesforce_accounts) do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                {length(@salesforce_accounts)} connected
-              </span>
-            <% else %>
-              <span class="text-xs text-gray-400 dark:text-gray-500">Not connected</span>
-            <% end %>
-          </div>
-        </div>
-        <%= if not Enum.empty?(@salesforce_accounts) do %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3 space-y-2">
-            <div
-              :for={account <- @salesforce_accounts}
-              class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-            >
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {account.uid}<%= if account.email do %> <span class="text-gray-400 dark:text-gray-500">({account.email})</span><% end %>
-              </p>
-              <button
-                phx-click="disconnect_account"
-                phx-value-id={account.id}
-                data-confirm="Are you sure you want to disconnect this Salesforce account?"
-                class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors cursor-pointer"
-              >
-                <.icon name="hero-trash-mini" class="h-3 w-3" />
-                Remove
-              </button>
-            </div>
-          </div>
-        <% end %>
-        <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3">
-          <.link
-            href={~p"/auth/salesforce"}
-            method="get"
-            class="inline-flex items-center gap-1.5 text-xs font-medium text-[#00a1e0] hover:text-[#0089c2] transition-colors cursor-pointer"
-          >
-            <.icon name="hero-plus-mini" class="h-3.5 w-3.5" />
-            <%= if Enum.empty?(@salesforce_accounts), do: "Connect Salesforce", else: "Connect another Salesforce" %>
-          </.link>
-        </div>
-      </div>
-    </div>
-  </section>
+  <%!-- Connected Accounts --%>
+  <.tabs default="calendar" id="settings-tabs">
+    <:list>
+      <.tabs_list>
+        <.tabs_trigger
+          :for={
+            {value, label} <- [
+              {"calendar", "Calendar & Meetings"},
+              {"crm", "CRM Integrations"},
+              {"social", "Social Media"}
+            ]
+          }
+          value={value}
+          tabs_id="settings-tabs"
+        >
+          <%= label %>
+        </.tabs_trigger>
+      </.tabs_list>
+    </:list>
 
-  <%!-- Social Media --%>
-  <section>
-    <div class="mb-4 flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-md bg-[#1877f2]/10 flex items-center justify-center">
-        <.icon name="hero-megaphone" class="h-4 w-4 text-[#1877f2]" />
-      </div>
-      <div>
-        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Social Media</h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Publish automated posts from meeting content</p>
-      </div>
-    </div>
+    <%!-- Calendar Tab --%>
+    <:content value="calendar">
+      <.integration_section
+        name="Google Calendar"
+        description="Sync meetings from Google Calendar"
+        icon={:google}
+        accounts={@google_accounts}
+        connect_path={~p"/auth/google?prompt=select_account%20consent"}
+      />
+    </:content>
 
-    <div class="space-y-3">
-      <%!-- Facebook --%>
-      <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-md bg-[#1877f2]/10 flex items-center justify-center">
-              <svg fill="#1877f2" viewBox="0 0 32 32" class="h-4 w-4">
-                <path d="M21.95 5.005l-3.306-.004c-3.206 0-5.277 2.124-5.277 5.415v2.495H10.05v4.515h3.317l-.004 9.575h4.641l.004-9.575h3.806l-.003-4.514h-3.803v-2.117c0-1.018.241-1.533 1.566-1.533l2.366-.001.01-4.256z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">Facebook</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Post to Facebook pages</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= if not Enum.empty?(@facebook_accounts) do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                Connected
-              </span>
-            <% else %>
-              <span class="text-xs text-gray-400 dark:text-gray-500">Not connected</span>
-            <% end %>
-          </div>
-        </div>
-        <%= if not Enum.empty?(@facebook_accounts) do %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3 space-y-2">
-            <div
-              :for={account <- @facebook_accounts}
-              class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-            >
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {account.uid}<%= if account.email do %> <span class="text-gray-400 dark:text-gray-500">({account.email})</span><% end %>
-              </p>
-              <div class="flex items-center gap-1.5">
-                <.link patch={~p"/auth/facebook"} class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer">
-                  Refresh
-                </.link>
-                <.link patch={~p"/dashboard/settings/facebook_pages"} class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer">
-                  Select Page
-                </.link>
-              </div>
-            </div>
-          </div>
-        <% else %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3">
-            <.link
-              href={~p"/auth/facebook"}
-              method="get"
-              class="inline-flex items-center gap-1.5 text-xs font-medium text-[#1877f2] hover:text-[#166fe5] transition-colors cursor-pointer"
-            >
-              <.icon name="hero-plus-mini" class="h-3.5 w-3.5" />
-              Connect Facebook
+    <%!-- CRM Tab --%>
+    <:content value="crm">
+      <div class="space-y-2">
+        <.integration_section
+          name="HubSpot"  
+          description="Contacts, deals & meeting notes"
+          icon={:hubspot}
+          accounts={@hubspot_accounts}
+          connect_path={~p"/auth/hubspot"}
+        />
+        <.integration_section
+          name="Salesforce"  
+          description="Contacts, opportunities & notes"
+          icon={:salesforce}
+          accounts={@salesforce_accounts}
+          connect_path={~p"/auth/salesforce"}
+        />
+      </div>
+    </:content>
+
+    <%!-- Social Media Tab --%>
+    <:content value="social">
+      <div class="space-y-2">
+        <.integration_section
+          name="Facebook"
+          description="Post to Facebook pages"
+          icon={:facebook}
+          accounts={@facebook_accounts}
+          connect_path={~p"/auth/facebook"}
+        >
+          <:extra_actions>
+            <.link patch={~p"/auth/facebook"}>
+              <.button variant="ghost" size="sm">Refresh</.button>
             </.link>
-          </div>
-        <% end %>
-      </div>
 
-      <%!-- LinkedIn --%>
-      <div class="bg-white dark:bg-[#232323] rounded-lg border border-gray-200 dark:border-[#2e2e2e] overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-md bg-[#0077b5]/10 flex items-center justify-center">
-              <svg class="h-4 w-4 text-[#0077b5]" viewBox="0 0 382 382" fill="currentColor">
-                <path d="M347.445,0H34.555C15.471,0,0,15.471,0,34.555v312.889C0,366.529,15.471,382,34.555,382h312.889C366.529,382,382,366.529,382,347.444V34.555C382,15.471,366.529,0,347.445,0z M118.207,329.844c0,5.554-4.502,10.056-10.056,10.056H65.345c-5.554,0-10.056-4.502-10.056-10.056V150.403c0-5.554,4.502-10.056,10.056-10.056h42.806c5.554,0,10.056,4.502,10.056,10.056V329.844z M86.748,123.432c-22.459,0-40.666-18.207-40.666-40.666S64.289,42.1,86.748,42.1s40.666,18.207,40.666,40.666S109.208,123.432,86.748,123.432z M341.91,330.654c0,5.106-4.14,9.246-9.246,9.246H286.73c-5.106,0-9.246-4.14-9.246-9.246v-84.168c0-12.556,3.683-55.021-32.813-55.021c-28.309,0-34.051,29.066-35.204,42.11v97.079c0,5.106-4.139,9.246-9.246,9.246h-44.426c-5.106,0-9.246-4.14-9.246-9.246V149.593c0-5.106,4.14-9.246,9.246-9.246h44.426c5.106,0,9.246,4.14,9.246,9.246v15.655c10.497-15.753,26.097-27.912,59.312-27.912c73.552,0,73.131,68.716,73.131,106.472L341.91,330.654L341.91,330.654z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">LinkedIn</h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Post to LinkedIn profile</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= if not Enum.empty?(@linkedin_accounts) do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                Connected
-              </span>
-            <% else %>
-              <span class="text-xs text-gray-400 dark:text-gray-500">Not connected</span>
-            <% end %>
-          </div>
-        </div>
-        <%= if not Enum.empty?(@linkedin_accounts) do %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3 space-y-2">
-            <div
-              :for={account <- @linkedin_accounts}
-              class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-[#1c1c1c] rounded-md"
-            >
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                URN: {account.uid}<%= if account.email do %> <span class="text-gray-400 dark:text-gray-500">({account.email})</span><% end %>
-              </p>
-            </div>
-          </div>
-        <% else %>
-          <div class="border-t border-gray-100 dark:border-[#2e2e2e] px-5 py-3">
-            <.link
-              href={~p"/auth/linkedin"}
-              method="get"
-              class="inline-flex items-center gap-1.5 text-xs font-medium text-[#0077b5] hover:text-[#006699] transition-colors cursor-pointer"
-            >
-              <.icon name="hero-plus-mini" class="h-3.5 w-3.5" />
-              Connect LinkedIn
+            <.link patch={~p"/dashboard/settings/facebook_pages"}>
+              <.button variant="ghost" size="sm">Select Page</.button>
             </.link>
-          </div>
-        <% end %>
+          </:extra_actions>
+        </.integration_section>
+
+        <.integration_section
+          name="LinkedIn"
+          description="Post to LinkedIn profile"
+          icon={:linkedin}
+          accounts={@linkedin_accounts}
+          connect_path={~p"/auth/linkedin"}
+          show_action_when_connected={false}
+        />
       </div>
-    </div>
-  </section>
+    </:content>
+  </.tabs>
 </div>
 
-<.modal
-  :if={@live_action == :facebook_pages}
-  id="facebook-pages-modal"
-  show
-  on_cancel={JS.patch(~p"/dashboard/settings")}
->
-  <div>
-    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-5">
-      Select a Facebook Page
-    </h2>
-    <.simple_form
-      for={@facebook_page_form}
-      phx-change="validate"
-      phx-submit="select_facebook_page"
-    >
-      <.input
-        type="select"
-        field={@facebook_page_form[:facebook_page]}
-        options={@facebook_page_options}
-      />
-      <:actions>
-        <.button type="submit" phx-disable-with="Saving..." class="cursor-pointer">Select</.button>
-      </:actions>
-    </.simple_form>
-  </div>
-</.modal>
+<%!-- Facebook Pages Modal --%>
+<%= if @live_action == :facebook_pages do %>
+  <.dialog id="facebook-pages-modal" show on_cancel={JS.patch(~p"/dashboard/settings")}>
+    <:header>
+      <.dialog_title>Select a Facebook Page</.dialog_title>
+    </:header>
+    <:content>
+      <.form
+        for={@facebook_page_form}
+        phx-change="validate"
+        phx-submit="select_facebook_page"
+        class="space-y-4"
+      >
+        <.form_field>
+          <.select field={@facebook_page_form[:facebook_page]} options={@facebook_page_options} />
+        </.form_field>
+        <div class="flex justify-end gap-2">
+          <.button type="button" variant="outline" phx-click={JS.patch(~p"/dashboard/settings")}>
+            Cancel
+          </.button>
+          <.button type="submit" phx-disable-with="Saving...">
+            Select
+          </.button>
+        </div>
+      </.form>
+    </:content>
+  </.dialog>
+<% end %>
