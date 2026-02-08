@@ -1,4 +1,4 @@
-defmodule SocialScribeWeb.CrmChatLive do
+defmodule SocialScribeWeb.CrmLive.ChatLive do
   use SocialScribeWeb, :live_view
 
   alias SocialScribe.Crm.Chat

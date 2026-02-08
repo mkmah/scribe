@@ -6,7 +6,6 @@ defmodule SocialScribeWeb.ModalComponents do
 
   import SocialScribeWeb.UI.Button
 
-  alias Phoenix.LiveView.JS
   alias SocialScribeWeb.UI.Icon
 
   # ============================================================================

@@ -24,7 +24,7 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
           </.dropdown_menu_item>
         </.dropdown_menu_content>
       </.dropdown_menu>
-      
+
       <.dropdown_menu align="end">
         <.dropdown_menu_trigger as_child>
           <.avatar src="/avatar.jpg" fallback="JD" />
@@ -41,7 +41,6 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
   """
   use Phoenix.Component
 
-  alias SocialScribeWeb.UI.Icon
   alias Phoenix.LiveView.JS
 
   # ============================================================================

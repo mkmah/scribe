@@ -14,8 +14,7 @@ defmodule SocialScribeWeb.UI.Separator do
 
   def separator(assigns) do
     ~H"""
-    <div class="w-full h-[1px] bg-border" />
-    <div class="h-full w-[1px] bg-border" />
+    <div class={orientation_classes(@orientation)} />
     """
   end
 

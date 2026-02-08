@@ -23,7 +23,7 @@ defmodule SocialScribeWeb.CrmModalTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      assert has_element?(view, "h2", "HubSpot Integration")
+      assert has_element?(view, "button", "Update HubSpot")
     end
 
     test "shows Salesforce card when salesforce credential exists", %{
@@ -35,7 +35,7 @@ defmodule SocialScribeWeb.CrmModalTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      assert has_element?(view, "h2", "Salesforce Integration")
+      assert has_element?(view, "button", "Update Salesforce")
     end
 
     test "shows both cards when both credentials exist", %{
@@ -48,15 +48,15 @@ defmodule SocialScribeWeb.CrmModalTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      assert has_element?(view, "h2", "HubSpot Integration")
-      assert has_element?(view, "h2", "Salesforce Integration")
+      assert has_element?(view, "button", "Update HubSpot")
+      assert has_element?(view, "button", "Update Salesforce")
     end
 
     test "shows no CRM cards when no credentials exist", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      refute has_element?(view, "h2", "HubSpot Integration")
-      refute has_element?(view, "h2", "Salesforce Integration")
+      refute has_element?(view, "button", "Update HubSpot")
+      refute has_element?(view, "button", "Update Salesforce")
     end
   end
 
@@ -103,7 +103,7 @@ defmodule SocialScribeWeb.CrmModalTest do
     test "renders modal with 'Update in Salesforce' title", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/salesforce")
 
-      assert has_element?(view, "h2", "Update in Salesforce")
+      assert has_element?(view, "h2", "Update Salesforce")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
@@ -125,7 +125,7 @@ defmodule SocialScribeWeb.CrmModalTest do
     test "does not show CRM section when no hubspot credential", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      refute has_element?(view, "h2", "HubSpot Integration")
+      refute has_element?(view, "button", "Update HubSpot")
     end
 
     test "does not show CRM section when no salesforce credential", %{
@@ -134,7 +134,7 @@ defmodule SocialScribeWeb.CrmModalTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
 
-      refute has_element?(view, "h2", "Salesforce Integration")
+      refute has_element?(view, "button", "Update Salesforce")
     end
   end
 

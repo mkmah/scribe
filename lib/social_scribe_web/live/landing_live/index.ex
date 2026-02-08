@@ -1,4 +1,4 @@
-defmodule SocialScribeWeb.LandingLive do
+defmodule SocialScribeWeb.LandingLive.Index do
   use SocialScribeWeb, :live_view
 
   @impl true
@@ -12,7 +12,7 @@ defmodule SocialScribeWeb.LandingLive do
     <div class="min-h-[80vh] flex items-center justify-center px-4">
       <div class="max-w-2xl mx-auto text-center">
         <div class="mb-8">
-          <.badge variant={:primary}>
+          <.badge variant="primary">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-3.5 w-3.5"

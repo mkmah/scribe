@@ -12,7 +12,7 @@ defmodule SocialScribeWeb.UserSettingsSalesforceTest do
     test "shows Connect Salesforce button when no credential", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      assert has_element?(view, "h2", "Connected Salesforce Accounts")
+      assert has_element?(view, "h3", "Salesforce")
       assert has_element?(view, "a", "Connect Salesforce")
     end
 
@@ -29,16 +29,17 @@ defmodule SocialScribeWeb.UserSettingsSalesforceTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      assert has_element?(view, "p", "Salesforce Account")
-      assert has_element?(view, "li", "sf_org_123")
-      assert has_element?(view, "li", "(sf_user@example.com)")
-      refute has_element?(view, "p", "You haven't connected any Salesforce accounts yet.")
+      assert has_element?(view, "p", "Contacts, opportunities & notes")
+      # Template shows email || uid, so when email exists, only email is displayed
+      assert has_element?(view, "p", "sf_user@example.com")
+      refute has_element?(view, "a", "Connect Salesforce")
+      assert has_element?(view, "a", "Connect another Salesforce")
     end
 
-    test "shows empty state when no Salesforce account connected", %{conn: conn} do
+    test "shows Connect button when no Salesforce account connected", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      assert has_element?(view, "p", "You haven't connected any Salesforce accounts yet.")
+      assert has_element?(view, "a", "Connect Salesforce")
     end
   end
 end

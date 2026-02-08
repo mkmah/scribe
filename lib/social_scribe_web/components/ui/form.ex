@@ -32,6 +32,9 @@ defmodule SocialScribeWeb.UI.Form do
   slot :inner_block, required: true
 
   def form_field(assigns) do
+    translated_errors = Enum.map(assigns.error, &translate_error/1)
+    assigns = assign(assigns, :translated_errors, translated_errors)
+
     ~H"""
     <div class={["flex flex-col space-y-2", @class]}>
       <%= if @label do %>
@@ -42,8 +45,8 @@ defmodule SocialScribeWeb.UI.Form do
 
       {render_slot(@inner_block)}
 
-      <%= if @error != [] do %>
-        <.form_errors errors={@error} />
+      <%= if @translated_errors != [] do %>
+        <.form_errors errors={@translated_errors} />
       <% end %>
     </div>
     """
@@ -53,7 +56,7 @@ defmodule SocialScribeWeb.UI.Form do
   # FORM LABEL
   # ============================================================================
 
-  attr :for, :string, default: nil
+  attr :for, :any, default: nil
   attr :required, :boolean, default: false
   attr :class, :string, default: nil
   attr :rest, :global
@@ -235,7 +238,7 @@ defmodule SocialScribeWeb.UI.Form do
         @class
       ]}
       {@rest}
-   >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
+    >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
     """
   end
 

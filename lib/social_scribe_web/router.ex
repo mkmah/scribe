@@ -74,10 +74,10 @@ defmodule SocialScribeWeb.Router do
         {SocialScribeWeb.LiveHooks, :assign_current_path}
       ],
       layout: {SocialScribeWeb.Layouts, :dashboard} do
-      live "/", HomeLive
+      live "/", DashboardLive.Index
 
-      live "/settings", UserSettingsLive, :index
-      live "/settings/facebook_pages", UserSettingsLive, :facebook_pages
+      live "/settings", UserSettingsLive.Index, :index
+      live "/settings/facebook_pages", UserSettingsLive.Index, :facebook_pages
 
       live "/meetings", MeetingLive.Index, :index
       live "/meetings/:id", MeetingLive.Show, :show
@@ -102,7 +102,7 @@ defmodule SocialScribeWeb.Router do
 
     live_session :current_user,
       on_mount: [{SocialScribeWeb.UserAuth, :mount_current_user}] do
-      live "/", LandingLive
+      live "/", LandingLive.Index
     end
   end
 end

@@ -6,21 +6,26 @@ defmodule SocialScribeWeb.UI.Skeleton do
 
       <.skeleton class="h-4 w-[250px]" />
       <.skeleton class="h-12 w-12 rounded-full" />
-      
+
       <.skeleton_card />
       <.skeleton_text lines={3} />
   """
   use Phoenix.Component
 
-  attr :class, :string, default: nil
+  import SocialScribeWeb.UI.Card
+
+  attr :class, :any, default: nil
   attr :rest, :global
 
   def skeleton(assigns) do
+    class = if is_list(assigns.class), do: Enum.join(assigns.class, " "), else: assigns.class
+    assigns = assign(assigns, :computed_class, class)
+
     ~H"""
     <div
       class={[
         "animate-pulse rounded-md bg-muted",
-        @class
+        @computed_class
       ]}
       {@rest}
     />
@@ -35,13 +40,13 @@ defmodule SocialScribeWeb.UI.Skeleton do
 
   def skeleton_card(assigns) do
     ~H"""
-    <Card.card class={["p-6", @class]}>
+    <.card class={["p-6", @class]}>
       <div class="space-y-3">
         <.skeleton class="h-4 w-1/3" />
         <.skeleton class="h-3 w-full" />
         <.skeleton class="h-3 w-2/3" />
       </div>
-    </Card.card>
+    </.card>
     """
   end
 
@@ -56,7 +61,7 @@ defmodule SocialScribeWeb.UI.Skeleton do
     ~H"""
     <div class={["space-y-2", @class]}>
       <%= for i <- 1..@lines do %>
-        <.skeleton class={["h-4", if(i == @lines, do: "w-2/3", else: "w-full")]} />
+        <.skeleton class={"h-4 #{if i == @lines, do: "w-2/3", else: "w-full"}"} />
       <% end %>
     </div>
     """

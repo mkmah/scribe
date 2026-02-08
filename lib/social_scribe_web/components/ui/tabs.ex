@@ -35,7 +35,10 @@ defmodule SocialScribeWeb.UI.Tabs do
   attr :rest, :global
 
   slot :list, required: true
-  slot :content, required: true
+
+  slot :content, required: true do
+    attr :value, :string, required: true
+  end
 
   def tabs(assigns) do
     default_tab = assigns.default || List.first(assigns.content)[:value]

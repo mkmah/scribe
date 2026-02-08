@@ -28,7 +28,7 @@ defmodule SocialScribeWeb.UI.Card do
   """
   use Phoenix.Component
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global
 
   slot :inner_block, required: true
@@ -36,11 +36,25 @@ defmodule SocialScribeWeb.UI.Card do
   slot :footer
 
   def card(assigns) do
+    class =
+      case assigns.class do
+        nil ->
+          nil
+
+        list when is_list(list) ->
+          list |> List.flatten() |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+
+        str ->
+          str
+      end
+
+    assigns = assign(assigns, :computed_class, class)
+
     ~H"""
     <div
       class={[
         "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
-        @class
+        @computed_class
       ]}
       {@rest}
     >

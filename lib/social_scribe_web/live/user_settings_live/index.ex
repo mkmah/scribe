@@ -1,4 +1,4 @@
-defmodule SocialScribeWeb.UserSettingsLive do
+defmodule SocialScribeWeb.UserSettingsLive.Index do
   use SocialScribeWeb, :live_view
 
   import SocialScribeWeb.Components.IntegrationCard, only: [integration_card: 1]
@@ -210,7 +210,10 @@ defmodule SocialScribeWeb.UserSettingsLive do
   attr :accounts, :list, default: []
   attr :icon, :atom, required: true
   attr :connect_path, :string, required: true
-  attr :disconnect_confirm_message, :string, default: "Are you sure you want to disconnect this account?"
+
+  attr :disconnect_confirm_message, :string,
+    default: "Are you sure you want to disconnect this account?"
+
   attr :show_action_when_connected, :boolean, default: true
   slot :extra_actions
 

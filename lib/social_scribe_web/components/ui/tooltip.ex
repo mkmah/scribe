@@ -12,7 +12,7 @@ defmodule SocialScribeWeb.UI.Tooltip do
           This is a tooltip
         </.tooltip_content>
       </.tooltip>
-      
+
       <.tooltip position="bottom">
         <.tooltip_trigger>
           <UI.Icon.info class="h-4 w-4" />
@@ -24,12 +24,11 @@ defmodule SocialScribeWeb.UI.Tooltip do
   """
   use Phoenix.Component
 
-  alias SocialScribeWeb.UI.Icon
-
   @positions ["top", "bottom", "left", "right"]
 
   attr :position, :string, values: @positions, default: "top"
   attr :delay, :integer, default: 150
+  attr :content, :string, default: nil
   attr :class, :string, default: nil
   attr :rest, :global
 
@@ -38,12 +37,20 @@ defmodule SocialScribeWeb.UI.Tooltip do
   def tooltip(assigns) do
     ~H"""
     <div
-      class={["relative inline-block", @class]}
+      class={["relative inline-block group", @class]}
       data-tooltip-position={@position}
       data-tooltip-delay={@delay}
       {@rest}
     >
       {render_slot(@inner_block)}
+      <%= if @content do %>
+        <span class={[
+          "absolute z-50 hidden whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background opacity-0 transition-opacity group-hover:block group-hover:opacity-100",
+          position_classes(@position)
+        ]}>
+          {@content}
+        </span>
+      <% end %>
     </div>
     """
   end

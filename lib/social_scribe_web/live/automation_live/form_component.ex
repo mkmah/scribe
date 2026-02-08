@@ -21,22 +21,22 @@ defmodule SocialScribeWeb.AutomationLive.FormComponent do
         phx-submit="save"
         class="space-y-4"
       >
-        <.form_field label="Name">
+        <.form_field label="Name" error={@form[:name].errors}>
           <.input field={@form[:name]} type="text" />
         </.form_field>
 
-        <.form_field label="Platform">
+        <.form_field label="Platform" error={@form[:platform].errors}>
           <.select
             field={@form[:platform]}
             options={Ecto.Enum.values(Automations.Automation, :platform)}
           />
         </.form_field>
 
-        <.form_field label="Description">
+        <.form_field label="Description" error={@form[:description].errors}>
           <.textarea field={@form[:description]} />
         </.form_field>
 
-        <.form_field label="Example">
+        <.form_field label="Example" error={@form[:example].errors}>
           <.textarea field={@form[:example]} />
         </.form_field>
 

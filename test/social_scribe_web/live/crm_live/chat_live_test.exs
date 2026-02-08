@@ -1,4 +1,4 @@
-defmodule SocialScribeWeb.CrmChatLiveTest do
+defmodule SocialScribeWeb.CrmLive.ChatLiveTest do
   use SocialScribeWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -15,7 +15,7 @@ defmodule SocialScribeWeb.CrmChatLiveTest do
     end
 
     test "renders Chat and History tabs", %{conn: conn} do
-      {:ok, view, html} = live(conn, ~p"/dashboard/chat")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/chat")
 
       assert html =~ "Chat"
       assert html =~ "History"

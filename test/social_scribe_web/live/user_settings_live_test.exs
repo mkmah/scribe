@@ -18,14 +18,14 @@ defmodule SocialScribeWeb.UserSettingsLiveTest do
     test "renders settings page for logged-in user", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      assert has_element?(view, "h1", "User Settings")
-      assert has_element?(view, "h2", "Connected Google Accounts")
-      assert has_element?(view, "a", "Connect another Google Account")
+      assert has_element?(view, "h1", "Settings")
+      assert has_element?(view, "h3", "Google")
+      assert has_element?(view, "a", "Connect Google")
     end
 
-    test "displays a message if no Google accounts are connected", %{conn: conn} do
+    test "displays Connect button if no Google accounts are connected", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
-      assert has_element?(view, "p", "You haven't connected any Google accounts yet.")
+      assert has_element?(view, "a", "Connect Google")
     end
 
     test "displays connected Google accounts", %{conn: conn, user: user} do
@@ -44,9 +44,9 @@ defmodule SocialScribeWeb.UserSettingsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
-      assert has_element?(view, "li", "UID: google-uid-123")
-      assert has_element?(view, "li", "(linked_account@example.com)")
-      refute has_element?(view, "p", "You haven't connected any Google accounts yet.")
+      assert has_element?(view, "p", "linked_account@example.com")
+      refute has_element?(view, "a", "Connect Google")
+      assert has_element?(view, "a", "Connect another Google")
     end
   end
 end

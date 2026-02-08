@@ -24,9 +24,13 @@ defmodule SocialScribeWeb.UI.Icon do
   # COMMON ICONS
   # ============================================================================
 
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
+  attr :rest, :global
 
   def check(assigns) do
+    class = if is_list(assigns.class), do: Enum.join(assigns.class, " "), else: assigns.class
+    assigns = assign(assigns, :computed_class, class)
+
     ~H"""
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -36,7 +40,8 @@ defmodule SocialScribeWeb.UI.Icon do
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"
-      class={["h-4 w-4", @class]}
+      class={["h-4 w-4", @computed_class]}
+      {@rest}
     >
       <path d="M20 6 9 17l-5-5" />
     </svg>

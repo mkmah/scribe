@@ -22,7 +22,6 @@ defmodule SocialScribeWeb.UI.Button do
   use Phoenix.Component
 
   alias SocialScribeWeb.UI.Icon
-  alias Phoenix.LiveView.JS
 
   @variants [
     "default",

@@ -1,4 +1,4 @@
-defmodule SocialScribeWeb.HomeLive do
+defmodule SocialScribeWeb.DashboardLive.Index do
   use SocialScribeWeb, :live_view
 
   alias SocialScribe.Calendar
