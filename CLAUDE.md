@@ -94,6 +94,7 @@ AI calls use a provider-agnostic interface:
   - Implements `AIContentGeneratorApi` behaviour for testability
 
 Switch providers by configuring `:llm_provider` in `config/runtime.exs`:
+
 ```elixir
 config :social_scribe, :llm_provider, SocialScribe.LLM.Anthropic
 # or

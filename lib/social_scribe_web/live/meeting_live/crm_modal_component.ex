@@ -16,7 +16,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     assigns = assign(assigns, :patch, ~p"/dashboard/meetings/#{assigns.meeting}")
     assigns = assign_new(assigns, :modal_id, fn -> "crm-modal-wrapper" end)
     provider_label = Registry.provider_label(assigns.provider)
-    assigns = assign(assigns, :provider_label, provider_label)
+    assigns =
+      assigns
+      |> assign(:provider_label, provider_label)
+      |> assign(:submit_class, provider_submit_class(assigns.provider))
 
     ~H"""
     <div class="space-y-4">
@@ -44,6 +47,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
           myself={@myself}
           patch={@patch}
           provider_label={@provider_label}
+          submit_class={@submit_class}
         />
       <% end %>
     </div>
@@ -55,13 +59,14 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
   attr :myself, :any, required: true
   attr :patch, :string, required: true
   attr :provider_label, :string, required: true
+  attr :submit_class, :string, required: true
 
   defp suggestions_section(assigns) do
     assigns = assign(assigns, :selected_count, Enum.count(assigns.suggestions, & &1.apply))
 
     ~H"""
     <div class="space-y-4">
-      <%= if @loading do %>
+      <%= if @loading and Enum.empty?(@suggestions) do %>
         <div class="py-8 text-center text-content-tertiary">
           <.icon name="hero-arrow-path" class="w-6 h-6 mx-auto mb-2 animate-spin" />
           <p>Generating suggestions...</p>
@@ -80,8 +85,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
 
             <.modal_footer
               cancel_patch={@patch}
-              submit_text={"Update #{@provider_label}"}
-              submit_class="bg-indigo-600 hover:bg-indigo-700"
+              submit_text="Update"
+              submit_class={@submit_class}
               disabled={@selected_count == 0}
               loading={@loading}
               loading_text="Updating..."
@@ -120,6 +125,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
 
   defp maybe_select_all_suggestions(socket, _assigns), do: socket
 
+  defp provider_submit_class("hubspot"), do: "bg-[#ff7a59] hover:bg-[#ff6a45] text-white"
+  defp provider_submit_class("salesforce"), do: "bg-[#00a1e0] hover:bg-[#0089c2] text-white"
+  defp provider_submit_class(_), do: "bg-primary text-primary-foreground"
+
   @impl true
   def handle_event("contact_search", %{"value" => query}, socket) do
     query = String.trim(query)
@@ -155,9 +164,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     else
       socket = assign(socket, dropdown_open: true, searching: true)
       contact = socket.assigns.selected_contact
-
-      query =
-        "#{contact.first_name || contact[:firstname]} #{contact.last_name || contact[:lastname]}"
+      query = contact.display_name || "#{contact.first_name || ""} #{contact.last_name || ""}" |> String.trim()
 
       send(
         self(),
@@ -170,7 +177,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
 
   @impl true
   def handle_event("select_contact", %{"id" => contact_id}, socket) do
-    contact = Enum.find(socket.assigns.contacts, &(&1.id == contact_id))
+    id_str = to_string(contact_id)
+    contact = Enum.find(socket.assigns.contacts, &(to_string(&1.id) == id_str))
 
     if contact do
       socket =
@@ -213,18 +221,27 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
 
   @impl true
   def handle_event("toggle_suggestion", params, socket) do
-    applied_fields = Map.get(params, "apply", %{})
-    values = Map.get(params, "values", %{})
-    checked_fields = Map.keys(applied_fields)
+    # Form sends only checked checkboxes; ensure "apply" is a map (keys = checked field names).
+    applied_fields = params["apply"]
+    applied_fields = if is_map(applied_fields), do: applied_fields, else: %{}
+    checked_set = applied_fields |> Map.keys() |> Enum.map(&to_string/1) |> MapSet.new()
+
+    values = params["values"]
+    values = if is_map(values), do: values, else: %{}
 
     updated_suggestions =
       Enum.map(socket.assigns.suggestions, fn suggestion ->
-        apply? = suggestion.field in checked_fields
+        field_key = to_string(suggestion.field)
+        apply? = MapSet.member?(checked_set, field_key)
+
+        new_value =
+          Map.get(values, field_key) || Map.get(values, suggestion.field)
 
         suggestion =
-          case Map.get(values, suggestion.field) do
-            nil -> suggestion
-            new_value -> %{suggestion | new_value: new_value}
+          if new_value != nil do
+            %{suggestion | new_value: new_value}
+          else
+            suggestion
           end
 
         %{suggestion | apply: apply?}

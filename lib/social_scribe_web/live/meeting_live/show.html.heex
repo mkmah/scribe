@@ -79,17 +79,10 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <%= if @hubspot_credential do %>
-              <.link patch={~p"/dashboard/meetings/#{@meeting}/hubspot"}>
-                <.button class="bg-[#ff7a59] hover:bg-[#ff6a45] text-white">
-                  Update HubSpot
-                </.button>
-              </.link>
-            <% end %>
-            <%= if @crm_credentials["salesforce"] do %>
-              <.link patch={~p"/dashboard/meetings/#{@meeting}/salesforce"}>
-                <.button class="bg-[#00a1e0] hover:bg-[#0089c2] text-white">
-                  Update Salesforce
+            <%= for entry <- @crm_entries do %>
+              <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{entry.provider}"}>
+                <.button class={entry.button_class}>
+                  Update <%= entry.label %>
                 </.button>
               </.link>
             <% end %>
@@ -209,44 +202,24 @@
   </.dialog>
 <% end %>
 
-<%= if @live_action == :hubspot && @hubspot_credential do %>
+<%= if @crm_modal_provider && Map.get(@crm_credentials, @crm_modal_provider) do %>
   <.dialog
-    id="hubspot-modal-wrapper"
+    id={"crm-modal-#{@crm_modal_provider}-wrapper"}
     show
+    size="lg"
     on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
   >
     <:header>
-      <.dialog_title>Update HubSpot</.dialog_title>
-    </:header>
-    <:content>
-      <.live_component
-        module={SocialScribeWeb.MeetingLive.HubspotModalComponent}
-        id="hubspot-modal"
-        meeting={@meeting}
-        credential={@hubspot_credential}
-        modal_id="hubspot-modal-wrapper"
-      />
-    </:content>
-  </.dialog>
-<% end %>
-
-<%= if @live_action == :salesforce && @crm_credentials["salesforce"] do %>
-  <.dialog
-    id="crm-modal-salesforce-wrapper"
-    show
-    on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
-  >
-    <:header>
-      <.dialog_title>Update Salesforce</.dialog_title>
+      <.dialog_title>Update <%= @crm_modal_provider_label %></.dialog_title>
     </:header>
     <:content>
       <.live_component
         module={SocialScribeWeb.MeetingLive.CrmModalComponent}
-        id="crm-modal-salesforce"
+        id={"crm-modal-#{@crm_modal_provider}"}
         meeting={@meeting}
-        credential={@crm_credentials["salesforce"]}
-        provider="salesforce"
-        modal_id="crm-modal-salesforce-wrapper"
+        credential={Map.get(@crm_credentials, @crm_modal_provider)}
+        provider={@crm_modal_provider}
+        modal_id={"crm-modal-#{@crm_modal_provider}-wrapper"}
       />
     </:content>
   </.dialog>

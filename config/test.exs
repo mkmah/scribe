@@ -37,6 +37,13 @@ config :logger, level: :warning
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
+# Use Tesla.Mock so tests can stub HTTP for GoogleCalendar, Recall, CRM adapters, etc.
+config :tesla, adapter: Tesla.Mock
+
+# Recall module needs these when exercised directly in tests
+config :social_scribe, :recall_api_key, "test-recall-key"
+config :social_scribe, :recall_region, "us"
+
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true

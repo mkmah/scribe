@@ -33,7 +33,14 @@ defmodule SocialScribe.Crm.Adapters.Salesforce do
       url = "/services/data/#{@sf_api_version}/search/?q=#{sosl_query}"
 
       case Tesla.get(client(cred), url) do
-        {:ok, %Tesla.Env{status: 200, body: %{"searchRecords" => results}}} ->
+        # REST API returns search results under "records" (SOQL/SOSL standard)
+        {:ok, %Tesla.Env{status: 200, body: %{"records" => results}}} when is_list(results) ->
+          contacts = Enum.map(results, &SalesforceFields.to_contact/1)
+          {:ok, contacts}
+
+        # Legacy or alternate response shape
+        {:ok, %Tesla.Env{status: 200, body: %{"searchRecords" => results}}}
+        when is_list(results) ->
           contacts = Enum.map(results, &SalesforceFields.to_contact/1)
           {:ok, contacts}
 
@@ -42,6 +49,7 @@ defmodule SocialScribe.Crm.Adapters.Salesforce do
           {:ok, contacts}
 
         {:ok, %Tesla.Env{status: status, body: body}} ->
+          Logger.warning("Salesforce search unexpected response status=#{status} body=#{inspect(body)}")
           {:error, {:api_error, status, body}}
 
         {:error, reason} ->

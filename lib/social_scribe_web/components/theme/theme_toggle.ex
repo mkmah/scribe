@@ -68,6 +68,7 @@ defmodule SocialScribeWeb.Theme.ThemeToggle do
   end
 
   defp dropdown_menu_content(assigns) do
+    assigns = assign_new(assigns, :class, fn -> nil end)
     ~H"""
     <div class={[
       "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md hidden",
@@ -81,6 +82,8 @@ defmodule SocialScribeWeb.Theme.ThemeToggle do
   end
 
   defp dropdown_menu_item(assigns) do
+    rest = Map.drop(assigns, [:__changed__, :inner_block])
+    assigns = assign(assigns, :rest, rest)
     ~H"""
     <button
       type="button"
@@ -93,6 +96,10 @@ defmodule SocialScribeWeb.Theme.ThemeToggle do
   end
 
   defp icon_button(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> nil end)
+      |> assign_new(:rest, fn -> %{} end)
     ~H"""
     <button
       type="button"

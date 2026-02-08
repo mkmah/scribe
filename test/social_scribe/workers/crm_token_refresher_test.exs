@@ -5,6 +5,13 @@ defmodule SocialScribe.Workers.CrmTokenRefresherTest do
 
   import SocialScribe.AccountsFixtures
 
+  # CRM adapters (HubSpot, Salesforce) use Tesla for HTTP; stub so perform/1 does not hit real APIs
+  setup do
+    body = %{"access_token" => "new", "refresh_token" => "new", "expires_in" => 3600}
+    Tesla.Mock.mock(fn _ -> %Tesla.Env{status: 200, body: body} end)
+    :ok
+  end
+
   describe "perform/1" do
     test "refreshes tokens expiring within 10 minutes for all CRM providers" do
       user = user_fixture()

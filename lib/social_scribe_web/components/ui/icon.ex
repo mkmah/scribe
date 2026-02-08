@@ -4,9 +4,9 @@ defmodule SocialScribeWeb.UI.Icon do
 
   ## Examples
 
-      <.icon name="hero-home" class="h-4 w-4" />
-      <.check class="h-4 w-4" />
-      <.x class="h-4 w-4" />
+      <.icon name="hero-home" class="w-4 h-4" />
+      <.check class="w-4 h-4" />
+      <.x class="w-4 h-4" />
   """
   use Phoenix.Component
 

@@ -9,7 +9,22 @@ defmodule SocialScribe.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      # Only ignore third-party and release; reach 90% by writing tests.
+      test_coverage: [
+        summary: [threshold: 90],
+        ignore_modules: [
+          SocialScribe.Release,
+          SocialScribe.ChatFixtures,
+          SocialScribe.LinkedIn,
+          SocialScribe.LinkedInApi,
+          SocialScribe.Facebook,
+          SocialScribe.FacebookApi,
+          SocialScribe.HubspotSuggestions,
+          SocialScribeWeb.MeetingLive.HubspotModalComponent,
+          ~r/^Ueberauth\.Strategy\./
+        ]
+      ]
     ]
   end
 

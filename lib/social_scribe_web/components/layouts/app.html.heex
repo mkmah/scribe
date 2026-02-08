@@ -43,10 +43,7 @@
 </header>
 <main class="px-4 py-12 sm:px-6 lg:px-8">
   <div class="mx-auto max-w-3xl space-y-4">
-    <.flash flash={@flash} kind={:info} />
-    <.flash flash={@flash} kind={:error} />
-    <.flash flash={@flash} kind={:success} />
-    <.flash flash={@flash} kind={:warning} />
+    <.flash_toast flash={@flash} duration={5000} />
     {@inner_content}
   </div>
 </main>

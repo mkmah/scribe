@@ -178,6 +178,55 @@ defmodule SocialScribeWeb.UI.Alert do
     """
   end
 
+  @doc """
+  Renders flash messages as toasts: fixed bottom-right, with close button and auto-dismiss timeout.
+  """
+  attr :flash, :map, required: true
+  attr :duration, :integer, default: 5000
+
+  def flash_toast(assigns) do
+    entries =
+      for kind <- [:info, :error, :success, :warning],
+          message = Phoenix.Flash.get(assigns.flash, kind),
+          message != nil,
+          do: {kind, message}
+
+    assigns = assign(assigns, :entries, entries)
+
+    ~H"""
+    <div
+      id="flash-toast-container"
+      class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none [&>*]:pointer-events-auto"
+      role="region"
+      aria-label="Notifications"
+    >
+      <div
+        :for={{kind, message} <- @entries}
+        id={"toast-flash-#{kind}"}
+        phx-hook="FlashToast"
+        data-duration={@duration}
+        role="alert"
+        class={[
+          "flex items-start gap-3 w-full max-w-sm rounded-lg border border-border p-4 shadow-lg",
+          "animate-in fade-in-0 slide-in-from-bottom-4 duration-300",
+          flash_variant_classes(kind)
+        ]}
+      >
+        <.flash_icon kind={kind} />
+        <p class="flex-1 text-sm font-medium min-w-0">{message}</p>
+        <button
+          type="button"
+          phx-click={JS.hide(to: "#toast-flash-#{kind}")}
+          class="shrink-0 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Close"
+        >
+          <Icon.x class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
   defp flash_variant_classes(:info), do: "border-info/50 text-info bg-info/10"
 
   defp flash_variant_classes(:error),

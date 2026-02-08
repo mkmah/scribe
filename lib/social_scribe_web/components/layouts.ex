@@ -13,4 +13,7 @@ defmodule SocialScribeWeb.Layouts do
   import SocialScribeWeb.Layout.Sidebar
 
   embed_templates "layouts/*"
+
+  @doc "Returns the list of layout names (root, app, dashboard)."
+  def layout_names, do: [:root, :app, :dashboard]
 end

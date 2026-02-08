@@ -139,7 +139,7 @@ defmodule SocialScribeWeb.UI.Button do
   attr :type, :string, default: "button"
   attr :class, :string, default: nil
   attr :variant, :string, values: @variants, default: "default"
-  attr :size, :string, values: ["default", "xs", "sm", "lg"], default: "default"
+  attr :size, :string, values: ["default", "xs", "sm", "lg", "icon"], default: "default"
   attr :disabled, :boolean, default: false
   attr :loading, :boolean, default: false
   attr :rest, :global

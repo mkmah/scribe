@@ -22,14 +22,15 @@ defmodule SocialScribeWeb.HubspotModalTest do
     test "renders modal when navigating to hubspot route", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/hubspot")
 
-      assert has_element?(view, "#hubspot-modal-wrapper")
-      assert has_element?(view, "h2", "Update in HubSpot")
+      assert has_element?(view, "#crm-modal-hubspot-wrapper")
+      assert has_element?(view, "h2", "Update HubSpot")
     end
 
     test "displays contact search input", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/hubspot")
 
       assert has_element?(view, "input[placeholder*='Search']")
+      assert has_element?(view, "#crm-modal-hubspot-wrapper")
     end
 
     test "shows contact search initially without suggestions form", %{
@@ -49,12 +50,12 @@ defmodule SocialScribeWeb.HubspotModalTest do
     test "modal can be closed by navigating back", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/hubspot")
 
-      assert has_element?(view, "#hubspot-modal-wrapper")
+      assert has_element?(view, "#crm-modal-hubspot-wrapper")
 
       # Navigate back to the meeting page
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      refute has_element?(view, "#hubspot-modal-wrapper")
+      refute has_element?(view, "#crm-modal-hubspot-wrapper")
     end
   end
 
@@ -84,7 +85,7 @@ defmodule SocialScribeWeb.HubspotModalTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/hubspot")
 
       # Modal should not be present since there's no hubspot credential
-      refute html =~ "hubspot-modal-wrapper"
+      refute html =~ "crm-modal-hubspot-wrapper"
     end
   end
 
@@ -108,7 +109,7 @@ defmodule SocialScribeWeb.HubspotModalTest do
       # The modal component handles toggle_suggestion events
       # We can test this by sending the event directly to the component
       # First verify the modal is present
-      assert has_element?(view, "#hubspot-modal-wrapper")
+      assert has_element?(view, "#crm-modal-hubspot-wrapper")
     end
 
     test "contact_search input is present and accepts input", %{conn: conn, meeting: meeting} do
@@ -117,7 +118,7 @@ defmodule SocialScribeWeb.HubspotModalTest do
       # Verify the search input exists and has the correct attributes
       assert has_element?(view, "input[phx-keyup='contact_search']")
       assert has_element?(view, "input[placeholder*='Search']")
-      assert has_element?(view, "#hubspot-modal-wrapper")
+      assert has_element?(view, "#crm-modal-hubspot-wrapper")
     end
   end
 

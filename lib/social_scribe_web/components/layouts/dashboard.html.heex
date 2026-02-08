@@ -81,11 +81,8 @@
 
   <div class="flex-1 overflow-auto">
     <main class="p-6 max-w-5xl mx-auto">
-      <%!-- Flash Messages --%>
-      <.flash flash={@flash} kind={:info} />
-      <.flash flash={@flash} kind={:error} />
-      <.flash flash={@flash} kind={:success} />
-      <.flash flash={@flash} kind={:warning} />
+      <%!-- Flash toasts (close button + auto-dismiss) --%>
+      <.flash_toast flash={@flash} duration={5000} />
 
       {@inner_content}
     </main>

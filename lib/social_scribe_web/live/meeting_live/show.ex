@@ -7,11 +7,9 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   alias SocialScribe.Meetings
   alias SocialScribe.Automations
   alias SocialScribe.Accounts
-  alias SocialScribe.HubspotApiBehaviour, as: HubspotApi
-  alias SocialScribe.HubspotSuggestions
   alias SocialScribe.Crm.Registry
-  alias SocialScribe.Crm.Suggestions, as: CrmSuggestions
   alias SocialScribe.Workers.AIContentGenerationWorker
+  alias SocialScribeWeb.MeetingLive.CrmHandlers
 
   @impl true
   def mount(%{"id" => meeting_id}, _session, socket) do
@@ -33,10 +31,11 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       {:error, socket}
     else
       # Old HubSpot credential (for backward compatibility)
-      hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
+      # hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
 
       # Build CRM credentials map for all registered providers
       crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
+      crm_entries = build_crm_entries(crm_credentials)
 
       socket =
         socket
@@ -44,8 +43,11 @@ defmodule SocialScribeWeb.MeetingLive.Show do
         |> assign(:meeting, meeting)
         |> assign(:automation_results, automation_results)
         |> assign(:user_has_automations, user_has_automations)
-        |> assign(:hubspot_credential, hubspot_credential)
+        # |> assign(:hubspot_credential, hubspot_credential)
         |> assign(:crm_credentials, crm_credentials)
+        |> assign(:crm_entries, crm_entries)
+        |> assign(:crm_modal_provider, nil)
+        |> assign(:crm_modal_provider_label, nil)
         |> assign(:regenerating, false)
         |> assign(
           :follow_up_email_form,
@@ -72,7 +74,28 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   end
 
   @impl true
-  def handle_params(_params, _uri, socket) do
+  def handle_params(params, _uri, socket) do
+    {crm_modal_provider, crm_modal_provider_label} =
+      case socket.assigns.live_action do
+        :hubspot ->
+          {"hubspot", Registry.provider_label("hubspot")}
+
+        :salesforce ->
+          {"salesforce", Registry.provider_label("salesforce")}
+
+        :crm ->
+          provider = params["provider"]
+          {provider, provider && Registry.provider_label(provider)}
+
+        _ ->
+          {nil, nil}
+      end
+
+    socket =
+      socket
+      |> assign(:crm_modal_provider, crm_modal_provider)
+      |> assign(:crm_modal_provider_label, crm_modal_provider_label)
+
     {:noreply, socket}
   end
 
@@ -108,151 +131,29 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     end
   end
 
-  # === Old HubSpot-specific handlers (kept for backward compat until Phase 6) ===
+  # === CRM Handlers (Delegated) ===
 
   @impl true
-  def handle_info({:hubspot_search, query, credential}, socket) do
-    case HubspotApi.search_contacts(credential, query) do
-      {:ok, contacts} ->
-        send_update(SocialScribeWeb.MeetingLive.HubspotModalComponent,
-          id: "hubspot-modal",
-          contacts: contacts,
-          searching: false
-        )
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.HubspotModalComponent,
-          id: "hubspot-modal",
-          error: "Failed to search contacts: #{inspect(reason)}",
-          searching: false
-        )
-    end
-
-    {:noreply, socket}
-  end
+  def handle_info({:hubspot_search, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
-  def handle_info({:generate_suggestions, contact, meeting, _credential}, socket) do
-    case HubspotSuggestions.generate_suggestions_from_meeting(meeting) do
-      {:ok, suggestions} ->
-        merged = HubspotSuggestions.merge_with_contact(suggestions, normalize_contact(contact))
-
-        send_update(SocialScribeWeb.MeetingLive.HubspotModalComponent,
-          id: "hubspot-modal",
-          step: :suggestions,
-          suggestions: merged,
-          loading: false
-        )
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.HubspotModalComponent,
-          id: "hubspot-modal",
-          error: "Failed to generate suggestions: #{inspect(reason)}",
-          loading: false
-        )
-    end
-
-    {:noreply, socket}
-  end
+  def handle_info({:generate_suggestions, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
-  def handle_info({:apply_hubspot_updates, updates, contact, credential}, socket) do
-    case HubspotApi.update_contact(credential, contact.id, updates) do
-      {:ok, _updated_contact} ->
-        socket =
-          socket
-          |> put_flash(:info, "Successfully updated #{map_size(updates)} field(s) in HubSpot")
-          |> push_patch(to: ~p"/dashboard/meetings/#{socket.assigns.meeting}")
-
-        {:noreply, socket}
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.HubspotModalComponent,
-          id: "hubspot-modal",
-          error: "Failed to update contact: #{inspect(reason)}",
-          loading: false
-        )
-
-        {:noreply, socket}
-    end
-  end
-
-  # === Generic CRM handlers ===
+  def handle_info({:apply_hubspot_updates, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
-  def handle_info({:crm_search, provider, query, credential}, socket) do
-    adapter = Registry.adapter_for!(provider)
-
-    case adapter.search_contacts(credential, query) do
-      {:ok, contacts} ->
-        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
-          id: "crm-modal-#{provider}",
-          contacts: contacts,
-          searching: false
-        )
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
-          id: "crm-modal-#{provider}",
-          error: "Failed to search contacts: #{inspect(reason)}",
-          searching: false
-        )
-    end
-
-    {:noreply, socket}
-  end
+  def handle_info({:crm_search, _, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
-  def handle_info({:crm_generate_suggestions, provider, contact, meeting, _credential}, socket) do
-    case CrmSuggestions.generate_from_meeting(meeting) do
-      {:ok, suggestions} ->
-        merged = CrmSuggestions.merge_with_contact(suggestions, contact)
-
-        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
-          id: "crm-modal-#{provider}",
-          step: :suggestions,
-          suggestions: merged,
-          loading: false
-        )
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
-          id: "crm-modal-#{provider}",
-          error: "Failed to generate suggestions: #{inspect(reason)}",
-          loading: false
-        )
-    end
-
-    {:noreply, socket}
-  end
+  def handle_info({:crm_generate_suggestions, _, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
-  def handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket) do
-    adapter = Registry.adapter_for!(provider)
-    provider_label = Registry.provider_label(provider)
-
-    case adapter.update_contact(credential, contact.id, updates) do
-      {:ok, _updated_contact} ->
-        socket =
-          socket
-          |> put_flash(
-            :info,
-            "Successfully updated #{map_size(updates)} field(s) in #{provider_label}"
-          )
-          |> push_patch(to: ~p"/dashboard/meetings/#{socket.assigns.meeting}")
-
-        {:noreply, socket}
-
-      {:error, reason} ->
-        send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
-          id: "crm-modal-#{provider}",
-          error: "Failed to update contact: #{inspect(reason)}",
-          loading: false
-        )
-
-        {:noreply, socket}
-    end
-  end
+  def handle_info({:crm_apply_updates, _, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
 
   defp build_crm_credentials(user_id) do
     Registry.crm_providers()
@@ -264,10 +165,19 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     end)
   end
 
-  defp normalize_contact(contact) do
-    # Contact is already formatted with atom keys from HubspotApi.format_contact
-    contact
+  defp build_crm_entries(crm_credentials) do
+    Enum.map(crm_credentials, fn {provider, _credential} ->
+      %{
+        provider: provider,
+        label: Registry.provider_label(provider),
+        button_class: crm_button_class(provider)
+      }
+    end)
   end
+
+  defp crm_button_class("hubspot"), do: "bg-[#ff7a59] hover:bg-[#ff6a45] text-white"
+  defp crm_button_class("salesforce"), do: "bg-[#00a1e0] hover:bg-[#0089c2] text-white"
+  defp crm_button_class(_), do: "bg-primary text-primary-foreground hover:bg-primary/90"
 
   # Returns true if all automation results have failed status
   defp has_only_failed_results(automation_results) do
@@ -293,12 +203,18 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     colors = [
       # Pastel/soft colors that work well in both light and dark modes
       %{bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400"},
-      %{bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400"},
+      %{
+        bg: "bg-emerald-100 dark:bg-emerald-900/30",
+        text: "text-emerald-700 dark:text-emerald-400"
+      },
       %{bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-400"},
       %{bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400"},
       %{bg: "bg-rose-100 dark:bg-rose-900/30", text: "text-rose-700 dark:text-rose-400"},
       %{bg: "bg-cyan-100 dark:bg-cyan-900/30", text: "text-cyan-700 dark:text-cyan-400"},
-      %{bg: "bg-fuchsia-100 dark:bg-fuchsia-900/30", text: "text-fuchsia-700 dark:text-fuchsia-400"},
+      %{
+        bg: "bg-fuchsia-100 dark:bg-fuchsia-900/30",
+        text: "text-fuchsia-700 dark:text-fuchsia-400"
+      },
       %{bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-400"},
       %{bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-400"},
       %{bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-400"},

@@ -68,6 +68,8 @@ defmodule SocialScribe.Crm.Suggestions do
   @doc """
   Merges AI suggestions with a Contact to show current vs suggested values.
   Filters out suggestions where new_value matches current_value.
+  Deduplicates by field (keeps first suggestion per field) so the same field
+  is not shown multiple times when the AI returns duplicates.
   Marks all remaining suggestions with apply: true.
   """
   @spec merge_with_contact(list(map()), Contact.t()) :: list(map())
@@ -84,6 +86,23 @@ defmodule SocialScribe.Crm.Suggestions do
       }
     end)
     |> Enum.filter(& &1.has_change)
+    |> deduplicate_by_field()
+  end
+
+  # Keeps first suggestion per field so we never show duplicate field cards.
+  defp deduplicate_by_field(suggestions) do
+    suggestions
+    |> Enum.reduce({[], MapSet.new()}, fn suggestion, {acc, seen} ->
+      field_key = to_string(suggestion.field)
+
+      if MapSet.member?(seen, field_key) do
+        {acc, seen}
+      else
+        {[suggestion | acc], MapSet.put(seen, field_key)}
+      end
+    end)
+    |> elem(0)
+    |> Enum.reverse()
   end
 
   defp ai_impl do

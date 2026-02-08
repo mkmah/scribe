@@ -69,10 +69,10 @@ defmodule SocialScribeWeb.CrmModalTest do
       %{meeting: meeting, credential: credential}
     end
 
-    test "renders modal with 'Update in HubSpot' title", %{conn: conn, meeting: meeting} do
+    test "renders modal with 'Update HubSpot' title", %{conn: conn, meeting: meeting} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/hubspot")
 
-      assert has_element?(view, "h2", "Update in HubSpot")
+      assert has_element?(view, "h2", "Update HubSpot")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
@@ -87,7 +87,7 @@ defmodule SocialScribeWeb.CrmModalTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/hubspot")
 
       # Modal should be visible
-      assert has_element?(view, "h2", "Update in HubSpot")
+      assert has_element?(view, "h2", "Update HubSpot")
     end
   end
 

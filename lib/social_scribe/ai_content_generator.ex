@@ -145,6 +145,8 @@ defmodule SocialScribe.AIContentGenerator do
           {"field": "company", "value": "Acme Corp", "context": "Sarah said she just joined Acme Corp", "timestamp": "05:47"}
         ]
 
+        RETURN ONLY ONE suggestion per field. If the same field is mentioned multiple times in the transcript, include it only once (use the first or clearest mention). Do not duplicate fields in the array.
+
         ONLY return valid JSON, no other text.
 
         Meeting transcript:
@@ -182,10 +184,10 @@ defmodule SocialScribe.AIContentGenerator do
 
   defp parse_json_suggestions(response) do
     cleaned =
-      response
-      |> String.trim()
-      |> String.replace(~r/^```json\n?/, "")
-      |> String.replace(~r/\n?```$/, "")
+      case Regex.run(~r/```json\n?(.*?)```/s, response) do
+        [_, json_content] -> json_content
+        _ -> response
+      end
       |> String.trim()
 
     case Jason.decode(cleaned) do
@@ -209,7 +211,29 @@ defmodule SocialScribe.AIContentGenerator do
         {:ok, []}
 
       {:error, _} ->
-        {:ok, []}
+        # fallback: try to look for just the array [ ... ] if previous attempts failed
+        case Regex.run(~r/\[.*\]/s, cleaned) do
+          [json_array] ->
+            case Jason.decode(json_array) do
+              {:ok, suggestions} when is_list(suggestions) ->
+                # Recursively parse the found array string
+                # But to avoid infinite recursion or complexity, let's just duplicate the formatting logic extraction
+                # ideally we refactor. For now, let's simply return empty if this fails too or just try to decode it.
+                # Let's actually just retry the whole parse_json_suggestions with the extracted array
+                # But checking for infinite loop.
+                if json_array != response do
+                  parse_json_suggestions(json_array)
+                else
+                  {:ok, []}
+                end
+
+              _ ->
+                {:ok, []}
+            end
+
+          _ ->
+            {:ok, []}
+        end
     end
   end
 end

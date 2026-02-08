@@ -110,6 +110,19 @@ Hooks.ScrollToBottom = {
     }
 }
 
+// Auto-hide flash toast after duration (avoids JS.delay which is not in LiveView 1.0)
+Hooks.FlashToast = {
+    mounted() {
+        const ms = parseInt(this.el.dataset.duration || "5000", 10)
+        this._timer = setTimeout(() => {
+            this.el.style.display = "none"
+        }, ms)
+    },
+    destroyed() {
+        if (this._timer) clearTimeout(this._timer)
+    }
+}
+
 Hooks.TimezoneDetect = {
     mounted() {
         this._setTimezone()
