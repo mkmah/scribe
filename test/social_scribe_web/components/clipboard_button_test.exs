@@ -33,11 +33,7 @@ defmodule SocialScribeWeb.Components.ClipboardButtonTest do
 
     def render(assigns) do
       ~H"""
-      <.live_component
-        module={SocialScribeWeb.ClipboardButtonComponent}
-        id={@id}
-        text={@text}
-      />
+      <.live_component module={SocialScribeWeb.ClipboardButtonComponent} id={@id} text={@text} />
       """
     end
   end
@@ -45,7 +41,9 @@ defmodule SocialScribeWeb.Components.ClipboardButtonTest do
   describe "ClipboardButton (function component)" do
     test "renders via clipboard_button component", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ClipboardButtonWrapperLive, session: %{"id" => "cb1", "text" => "copy me"})
+        live_isolated(conn, ClipboardButtonWrapperLive,
+          session: %{"id" => "cb1", "text" => "copy me"}
+        )
 
       assert html =~ "Copy"
       assert html =~ "hero-clipboard"

@@ -161,30 +161,32 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
       type="button"
       disabled={@disabled}
       data-variant={@variant}
-      class={[
-        "relative flex cursor-pointer select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-none transition-colors",
-        # Negative margins to extend hover to container edges
-        "-mx-1",
-        # Default hover and focus styles
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus:bg-accent focus:text-accent-foreground",
-        # Disabled styles
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        # Destructive variant - always red text
-        "data-[variant=destructive]:text-destructive",
-        # Destructive variant - light red bg on hover/focus
-        "data-[variant=destructive]:hover:bg-destructive/10",
-        "data-[variant=destructive]:hover:text-destructive",
-        "data-[variant=destructive]:focus:bg-destructive/10",
-        "data-[variant=destructive]:focus:text-destructive",
-        # Dark mode for destructive - use more vibrant color
-        "dark:data-[variant=destructive]:hover:bg-red-950/50",
-        "dark:data-[variant=destructive]:focus:bg-red-950/50",
-        "dark:data-[variant=destructive]:text-red-400",
-        # Icon styling
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        @class
-      ]}
+      class={
+        [
+          "relative flex cursor-pointer select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-none transition-colors",
+          # Negative margins to extend hover to container edges
+          "-mx-1",
+          # Default hover and focus styles
+          "hover:bg-accent hover:text-accent-foreground",
+          "focus:bg-accent focus:text-accent-foreground",
+          # Disabled styles
+          "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          # Destructive variant - always red text
+          "data-[variant=destructive]:text-destructive",
+          # Destructive variant - light red bg on hover/focus
+          "data-[variant=destructive]:hover:bg-destructive/10",
+          "data-[variant=destructive]:hover:text-destructive",
+          "data-[variant=destructive]:focus:bg-destructive/10",
+          "data-[variant=destructive]:focus:text-destructive",
+          # Dark mode for destructive - use more vibrant color
+          "dark:data-[variant=destructive]:hover:bg-red-950/50",
+          "dark:data-[variant=destructive]:focus:bg-red-950/50",
+          "dark:data-[variant=destructive]:text-red-400",
+          # Icon styling
+          "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          @class
+        ]
+      }
       {@rest}
     >
       {render_slot(@inner_block)}

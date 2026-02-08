@@ -31,6 +31,7 @@ defmodule SocialScribe.LLM.AnthropicTest do
 
     test "extracts text when text block is not first in content list" do
       Application.put_env(:social_scribe, :anthropic_auth_token, "test-token")
+
       body = %{
         "content" => [
           %{"type" => "thinking", "thinking" => "..."},
@@ -71,6 +72,7 @@ defmodule SocialScribe.LLM.AnthropicTest do
 
     test "returns api_error when API returns non-200 status" do
       Application.put_env(:social_scribe, :anthropic_auth_token, "test-token")
+
       Tesla.Mock.mock(fn %{method: :post} ->
         %Tesla.Env{status: 401, body: %{"error" => "Unauthorized"}}
       end)

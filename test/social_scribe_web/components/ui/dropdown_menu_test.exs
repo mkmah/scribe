@@ -65,11 +65,14 @@ defmodule SocialScribeWeb.Components.UI.DropdownMenuTest do
       assert html =~ "Item"
     end
 
-    test "renders dropdown with label, separator, group, item variants and as_child trigger", %{conn: conn} do
+    test "renders dropdown with label, separator, group, item variants and as_child trigger", %{
+      conn: conn
+    } do
       {:ok, _view, html} =
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "full-menu", "as_child" => true}
         )
+
       assert html =~ "My Account"
       assert html =~ "Profile"
       assert html =~ "Delete"
@@ -85,6 +88,7 @@ defmodule SocialScribeWeb.Components.UI.DropdownMenuTest do
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d1", "align" => "start", "side" => "bottom"}
         )
+
       assert html =~ "origin-top-left"
       assert html =~ "left-0 top-full"
 
@@ -92,12 +96,14 @@ defmodule SocialScribeWeb.Components.UI.DropdownMenuTest do
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d2", "align" => "end", "side" => "bottom"}
         )
+
       assert html =~ "origin-top-right"
 
       {:ok, _view, html} =
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d3", "align" => "end", "side" => "top"}
         )
+
       assert html =~ "origin-bottom-right"
       assert html =~ "bottom-full"
 
@@ -105,12 +111,14 @@ defmodule SocialScribeWeb.Components.UI.DropdownMenuTest do
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d4", "align" => "start", "side" => "top"}
         )
+
       assert html =~ "origin-bottom-left"
 
       {:ok, _view, html} =
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d5", "align" => "center", "side" => "top"}
         )
+
       assert html =~ "origin-bottom"
       assert html =~ "-translate-x-1/2"
     end
@@ -120,6 +128,7 @@ defmodule SocialScribeWeb.Components.UI.DropdownMenuTest do
         live_isolated(conn, DropdownMenuFullTestLive,
           session: %{"id" => "d6", "class" => "dropdown-custom"}
         )
+
       assert html =~ "dropdown-custom"
     end
   end

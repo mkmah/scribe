@@ -19,12 +19,7 @@ defmodule SocialScribeWeb.Components.IntegrationCardTest do
 
     def render(assigns) do
       ~H"""
-      <.integration_card
-        name={@name}
-        description={@description}
-        connected={@connected}
-        icon={@icon}
-      >
+      <.integration_card name={@name} description={@description} connected={@connected} icon={@icon}>
         <:action>
           <.link href="/settings">Connect</.link>
         </:action>
@@ -43,12 +38,7 @@ defmodule SocialScribeWeb.Components.IntegrationCardTest do
 
     def render(assigns) do
       ~H"""
-      <.integration_card
-        name="Google"
-        description="Calendar"
-        connected={true}
-        icon={:google}
-      >
+      <.integration_card name="Google" description="Calendar" connected={true} icon={:google}>
         <:connection_list>
           <p>user@example.com</p>
         </:connection_list>
@@ -64,7 +54,11 @@ defmodule SocialScribeWeb.Components.IntegrationCardTest do
     test "renders name, description and Not Connected when disconnected", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, IntegrationCardTestLive,
-          session: %{"name" => "Salesforce", "description" => "CRM integration", "connected" => false}
+          session: %{
+            "name" => "Salesforce",
+            "description" => "CRM integration",
+            "connected" => false
+          }
         )
 
       assert html =~ "Salesforce"

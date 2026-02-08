@@ -42,7 +42,9 @@ defmodule SocialScribeWeb.Components.SidebarTest do
 
     test "applies active styles when active", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, SidebarLinkTestLive, session: %{"active" => true, "label" => "Active"})
+        live_isolated(conn, SidebarLinkTestLive,
+          session: %{"active" => true, "label" => "Active"}
+        )
 
       assert html =~ "Active"
       assert html =~ "bg-primary"

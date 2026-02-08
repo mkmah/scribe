@@ -47,6 +47,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponentTest do
     test "renders draft post form with generated content", %{conn: conn, user: user} do
       meeting = meeting_for_user(user)
       automation = automation_fixture(%{user_id: user.id, platform: :linkedin})
+
       automation_result =
         automation_result_fixture(%{
           meeting_id: meeting.id,
@@ -75,6 +76,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponentTest do
     test "validate updates form on phx-change", %{conn: conn, user: user} do
       meeting = meeting_for_user(user)
       automation = automation_fixture(%{user_id: user.id, platform: :linkedin})
+
       automation_result =
         automation_result_fixture(%{
           meeting_id: meeting.id,
@@ -98,7 +100,6 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponentTest do
 
       assert render(view) =~ "Updated draft text"
     end
-
   end
 
   describe "DraftPostFormComponent via MeetingLive draft_post" do
@@ -107,6 +108,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponentTest do
     test "draft_post page renders component and post error path", %{conn: conn, user: user} do
       meeting = meeting_for_user(user)
       automation = automation_fixture(%{user_id: user.id, platform: :linkedin})
+
       automation_result =
         automation_result_fixture(%{
           meeting_id: meeting.id,

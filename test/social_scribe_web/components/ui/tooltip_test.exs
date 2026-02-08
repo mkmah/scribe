@@ -63,7 +63,9 @@ defmodule SocialScribeWeb.Components.UI.TooltipTest do
 
   describe "UI.Tooltip" do
     test "renders tooltip with content and trigger", %{conn: conn} do
-      {:ok, _view, html} = live_isolated(conn, TooltipTestLive, session: %{"content" => "Help text"})
+      {:ok, _view, html} =
+        live_isolated(conn, TooltipTestLive, session: %{"content" => "Help text"})
+
       assert html =~ "Help text"
       assert html =~ "Hover"
     end
@@ -75,7 +77,9 @@ defmodule SocialScribeWeb.Components.UI.TooltipTest do
     end
 
     test "renders simple_tooltip", %{conn: conn} do
-      {:ok, _view, html} = live_isolated(conn, SimpleTooltipTestLive, session: %{"text" => "Hint"})
+      {:ok, _view, html} =
+        live_isolated(conn, SimpleTooltipTestLive, session: %{"text" => "Hint"})
+
       assert html =~ "Hint"
     end
 
@@ -85,6 +89,7 @@ defmodule SocialScribeWeb.Components.UI.TooltipTest do
           live_isolated(conn, TooltipTestLive,
             session: %{"content" => "Pos", "position" => position}
           )
+
         assert html =~ "data-tooltip-position=\"#{position}\""
       end
     end

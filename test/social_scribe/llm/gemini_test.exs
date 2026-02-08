@@ -64,6 +64,7 @@ defmodule SocialScribe.LLM.GeminiTest do
 
     test "returns api_error when API returns non-200 status" do
       Application.put_env(:social_scribe, :gemini_api_key, "test-key")
+
       Tesla.Mock.mock(fn %{method: :post} ->
         %Tesla.Env{status: 403, body: %{"error" => "Forbidden"}}
       end)

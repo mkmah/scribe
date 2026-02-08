@@ -21,7 +21,9 @@ defmodule SocialScribeWeb.Components.UI.IconTest do
 
   defmodule IconFlashIconsTestLive do
     use SocialScribeWeb, :live_view
-    import SocialScribeWeb.UI.Icon, only: [info: 1, circle_alert: 1, circle_check: 1, triangle_alert: 1]
+
+    import SocialScribeWeb.UI.Icon,
+      only: [info: 1, circle_alert: 1, circle_check: 1, triangle_alert: 1]
 
     def mount(_params, _session, socket) do
       {:ok, socket}
@@ -103,7 +105,8 @@ defmodule SocialScribeWeb.Components.UI.IconTest do
       assert html =~ "h-4 w-4"
     end
 
-    test "renders all Icon components (chevron, spinner, search, more, trash, edit, copy, sun, moon, monitor, user, settings, logout)", %{conn: conn} do
+    test "renders all Icon components (chevron, spinner, search, more, trash, edit, copy, sun, moon, monitor, user, settings, logout)",
+         %{conn: conn} do
       {:ok, _view, html} = live_isolated(conn, AllIconsTestLive, [])
       assert html =~ "hero-home"
       assert html =~ "animate-spin"

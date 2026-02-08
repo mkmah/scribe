@@ -49,7 +49,10 @@ defmodule SocialScribe.Crm.Adapters.Salesforce do
           {:ok, contacts}
 
         {:ok, %Tesla.Env{status: status, body: body}} ->
-          Logger.warning("Salesforce search unexpected response status=#{status} body=#{inspect(body)}")
+          Logger.warning(
+            "Salesforce search unexpected response status=#{status} body=#{inspect(body)}"
+          )
+
           {:error, {:api_error, status, body}}
 
         {:error, reason} ->

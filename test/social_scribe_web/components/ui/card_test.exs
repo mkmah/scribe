@@ -133,6 +133,7 @@ defmodule SocialScribeWeb.Components.UI.CardTest do
     test "renders card with string class and card_header/card_footer", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, CardWithClassTestLive, session: %{"class" => "w-[350px]"})
+
       assert html =~ "w-[350px]"
       assert html =~ "Header Title"
       assert html =~ "Body"
@@ -144,6 +145,7 @@ defmodule SocialScribeWeb.Components.UI.CardTest do
         live_isolated(conn, CardWithClassTestLive,
           session: %{"class" => ["list-class", nil, "another-class"]}
         )
+
       assert html =~ "list-class"
       assert html =~ "another-class"
     end

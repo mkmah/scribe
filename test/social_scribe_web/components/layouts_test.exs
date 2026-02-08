@@ -25,11 +25,13 @@ defmodule SocialScribeWeb.Components.LayoutsTest do
 
     test "app/1 renders with flash and inner_content", %{conn: conn} do
       conn = get(conn, ~p"/")
+
       assigns = %{
         conn: conn,
         flash: %{},
         inner_content: "<div>app inner</div>"
       }
+
       html = render_component(&SocialScribeWeb.Layouts.app/1, assigns)
       assert html =~ "SocialScribe"
       assert html =~ "app inner"
@@ -49,6 +51,7 @@ defmodule SocialScribeWeb.Components.LayoutsTest do
       conn: conn
     } do
       conn = get(conn, ~p"/dashboard/settings")
+
       assigns =
         Map.merge(conn.assigns, %{
           inner_content: "<div>dashboard inner</div>"

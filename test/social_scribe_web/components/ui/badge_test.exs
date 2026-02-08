@@ -8,7 +8,8 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
 
     def mount(_params, session, socket) do
       variant = session["variant"]
-      variant = if variant == "primary_atom", do: :primary, else: (variant || "default")
+      variant = if variant == "primary_atom", do: :primary, else: variant || "default"
+
       {:ok,
        socket
        |> Phoenix.LiveView.Utils.assign(:variant, variant)
@@ -55,6 +56,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
         live_isolated(conn, BadgeTestLive,
           session: %{"variant" => "primary", "content" => "Primary"}
         )
+
       assert html =~ "Primary"
       assert html =~ "bg-primary"
     end
@@ -64,6 +66,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
         live_isolated(conn, BadgeTestLive,
           session: %{"variant" => "primary_atom", "content" => "Primary"}
         )
+
       assert html =~ "Primary"
       assert html =~ "bg-primary"
     end
@@ -73,6 +76,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
         live_isolated(conn, BadgeTestLive,
           session: %{"content" => "Badge", "class" => "custom-badge-class"}
         )
+
       assert html =~ "custom-badge-class"
     end
 
@@ -108,9 +112,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
 
     test "renders badge with outline variant", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, BadgeTestLive,
-          session: %{"variant" => "outline", "content" => "Out"}
-        )
+        live_isolated(conn, BadgeTestLive, session: %{"variant" => "outline", "content" => "Out"})
 
       assert html =~ "Out"
       assert html =~ "text-foreground"
@@ -118,9 +120,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
 
     test "renders badge with success variant", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, BadgeTestLive,
-          session: %{"variant" => "success", "content" => "OK"}
-        )
+        live_isolated(conn, BadgeTestLive, session: %{"variant" => "success", "content" => "OK"})
 
       assert html =~ "OK"
       assert html =~ "bg-success"
@@ -138,9 +138,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
 
     test "renders badge with info variant", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, BadgeTestLive,
-          session: %{"variant" => "info", "content" => "Info"}
-        )
+        live_isolated(conn, BadgeTestLive, session: %{"variant" => "info", "content" => "Info"})
 
       assert html =~ "Info"
       assert html =~ "bg-info"
@@ -181,6 +179,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
         live_isolated(conn, StatusBadgeTestLive,
           session: %{"status" => "success", "content" => "Done"}
         )
+
       assert html =~ "Done"
       assert html =~ "bg-success"
     end
@@ -190,6 +189,7 @@ defmodule SocialScribeWeb.Components.UI.BadgeTest do
         live_isolated(conn, StatusBadgeTestLive,
           session: %{"status" => "active", "content" => "OK", "class" => "status-class"}
         )
+
       assert html =~ "status-class"
     end
   end

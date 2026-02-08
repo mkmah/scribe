@@ -52,9 +52,7 @@ defmodule SocialScribeWeb.Components.UI.AvatarTest do
 
     test "renders avatar with src and fallback", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, AvatarTestLive,
-          session: %{"src" => "/img.png", "fallback" => "AB"}
-        )
+        live_isolated(conn, AvatarTestLive, session: %{"src" => "/img.png", "fallback" => "AB"})
 
       assert html =~ "src=\"/img.png\""
       assert html =~ "AB"
@@ -82,6 +80,7 @@ defmodule SocialScribeWeb.Components.UI.AvatarTest do
           ] do
         {:ok, _view, html} =
           live_isolated(conn, AvatarTestLive, session: %{"size" => size, "fallback" => "X"})
+
         assert html =~ class_fragment
       end
     end
@@ -91,12 +90,14 @@ defmodule SocialScribeWeb.Components.UI.AvatarTest do
         live_isolated(conn, AvatarTestLive,
           session: %{"fallback" => "Y", "class" => "avatar-custom"}
         )
+
       assert html =~ "avatar-custom"
     end
 
     test "avatar_group with custom class", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, AvatarGroupTestLive, session: %{"class" => "group-class"})
+
       assert html =~ "group-class"
     end
   end

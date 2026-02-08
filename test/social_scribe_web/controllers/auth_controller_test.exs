@@ -67,13 +67,17 @@ defmodule SocialScribeWeb.AuthControllerTest do
 
       assert redirected_to(conn) == ~p"/dashboard/settings"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Google"
-      cred = Repo.get_by(SocialScribe.Accounts.UserCredential, user_id: user.id, provider: "google")
+
+      cred =
+        Repo.get_by(SocialScribe.Accounts.UserCredential, user_id: user.id, provider: "google")
+
       assert cred != nil
     end
   end
 
   defp google_ueberauth_auth(overrides \\ %{}) do
     email = overrides[:email] || "user#{System.unique_integer([:positive])}@example.com"
+
     %Ueberauth.Auth{
       uid: overrides[:uid] || "google_#{System.unique_integer([:positive])}",
       provider: :google,

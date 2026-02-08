@@ -16,6 +16,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     assigns = assign(assigns, :patch, ~p"/dashboard/meetings/#{assigns.meeting}")
     assigns = assign_new(assigns, :modal_id, fn -> "crm-modal-wrapper" end)
     provider_label = Registry.provider_label(assigns.provider)
+
     assigns =
       assigns
       |> assign(:provider_label, provider_label)
@@ -164,7 +165,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmModalComponent do
     else
       socket = assign(socket, dropdown_open: true, searching: true)
       contact = socket.assigns.selected_contact
-      query = contact.display_name || "#{contact.first_name || ""} #{contact.last_name || ""}" |> String.trim()
+
+      query =
+        contact.display_name ||
+          "#{contact.first_name || ""} #{contact.last_name || ""}" |> String.trim()
 
       send(
         self(),

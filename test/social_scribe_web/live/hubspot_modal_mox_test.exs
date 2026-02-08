@@ -96,7 +96,9 @@ defmodule SocialScribeWeb.HubspotModalMoxTest do
       :timer.sleep(300)
 
       view
-      |> element("#crm-modal-hubspot-wrapper button[phx-click='select_contact'][phx-value-id='123']")
+      |> element(
+        "#crm-modal-hubspot-wrapper button[phx-click='select_contact'][phx-value-id='123']"
+      )
       |> render_click()
 
       :timer.sleep(500)

@@ -96,9 +96,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
 
     test "renders button with link variant", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ButtonTestLive,
-          session: %{"variant" => "link", "content" => "Link"}
-        )
+        live_isolated(conn, ButtonTestLive, session: %{"variant" => "link", "content" => "Link"})
 
       assert html =~ "Link"
       assert html =~ "text-primary"
@@ -107,9 +105,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
 
     test "renders button with size sm", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ButtonTestLive,
-          session: %{"size" => "sm", "content" => "Small"}
-        )
+        live_isolated(conn, ButtonTestLive, session: %{"size" => "sm", "content" => "Small"})
 
       assert html =~ "Small"
       assert html =~ "h-9"
@@ -117,9 +113,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
 
     test "renders button with size lg", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ButtonTestLive,
-          session: %{"size" => "lg", "content" => "Large"}
-        )
+        live_isolated(conn, ButtonTestLive, session: %{"size" => "lg", "content" => "Large"})
 
       assert html =~ "Large"
       assert html =~ "h-11"
@@ -127,9 +121,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
 
     test "renders button with size xs", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ButtonTestLive,
-          session: %{"size" => "xs", "content" => "Tiny"}
-        )
+        live_isolated(conn, ButtonTestLive, session: %{"size" => "xs", "content" => "Tiny"})
 
       assert html =~ "Tiny"
       assert html =~ "h-8"
@@ -140,6 +132,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, ButtonTestLive,
           session: %{"variant" => "secondary", "content" => "Sec"}
         )
+
       assert html =~ "Sec"
       assert html =~ "bg-secondary"
     end
@@ -149,6 +142,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, ButtonTestLive,
           session: %{"variant" => "outline", "content" => "Out"}
         )
+
       assert html =~ "Out"
       assert html =~ "border-border"
     end
@@ -158,6 +152,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, ButtonTestLive,
           session: %{"variant" => "ghost", "content" => "Ghost"}
         )
+
       assert html =~ "Ghost"
       assert html =~ "hover:bg-accent"
     end
@@ -167,15 +162,15 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, ButtonTestLive,
           session: %{"variant" => "destructive", "content" => "Delete"}
         )
+
       assert html =~ "Delete"
       assert html =~ "bg-destructive"
     end
 
     test "renders button with size icon", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ButtonTestLive,
-          session: %{"size" => "icon", "content" => "🔘"}
-        )
+        live_isolated(conn, ButtonTestLive, session: %{"size" => "icon", "content" => "🔘"})
+
       assert html =~ "h-10 w-10"
     end
 
@@ -184,6 +179,7 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, ButtonTestLive,
           session: %{"content" => "Custom", "class" => "my-custom-class"}
         )
+
       assert html =~ "Custom"
       assert html =~ "my-custom-class"
     end
@@ -199,45 +195,49 @@ defmodule SocialScribeWeb.Components.UI.ButtonTest do
         live_isolated(conn, IconButtonTestLive,
           session: %{"variant" => "outline", "size" => "sm"}
         )
+
       assert html =~ "border-border"
       assert html =~ "h-9 w-9"
 
       {:ok, _view, html} =
-        live_isolated(conn, IconButtonTestLive,
-          session: %{"size" => "xs"}
-        )
+        live_isolated(conn, IconButtonTestLive, session: %{"size" => "xs"})
+
       assert html =~ "h-8 w-8"
 
       {:ok, _view, html} =
-        live_isolated(conn, IconButtonTestLive,
-          session: %{"size" => "lg"}
-        )
+        live_isolated(conn, IconButtonTestLive, session: %{"size" => "lg"})
+
       assert html =~ "h-11 w-11"
     end
 
     test "icon_button disabled", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, IconButtonTestLive, session: %{"disabled" => true})
+
       assert html =~ "disabled"
     end
 
     test "icon_button with size icon", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, IconButtonTestLive, session: %{"size" => "icon"})
+
       assert html =~ "h-10 w-10"
     end
 
     test "icon_button variant secondary and ghost and destructive", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, IconButtonTestLive, session: %{"variant" => "secondary"})
+
       assert html =~ "bg-secondary"
 
       {:ok, _view, html} =
         live_isolated(conn, IconButtonTestLive, session: %{"variant" => "ghost"})
+
       assert html =~ "hover:bg-accent"
 
       {:ok, _view, html} =
         live_isolated(conn, IconButtonTestLive, session: %{"variant" => "destructive"})
+
       assert html =~ "bg-destructive"
     end
   end

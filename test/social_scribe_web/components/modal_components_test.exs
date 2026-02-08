@@ -109,6 +109,7 @@ defmodule SocialScribeWeb.Components.ModalComponentsTest do
 
     test "renders selected contact name when contact is set", %{conn: conn} do
       contact = %SocialScribe.Crm.Contact{display_name: "Jane Doe", email: "jane@example.com"}
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"selected_contact" => contact, "open" => true}
@@ -119,48 +120,63 @@ defmodule SocialScribeWeb.Components.ModalComponentsTest do
     end
 
     test "renders selected contact from map with display_name", %{conn: conn} do
-      contact = %{ "display_name" => "Map User", "email" => "map@example.com" }
+      contact = %{"display_name" => "Map User", "email" => "map@example.com"}
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"selected_contact" => contact, "open" => true}
         )
+
       assert html =~ "Map User"
     end
 
     test "renders contact from map with firstname and lastname", %{conn: conn} do
-      contact = %{"firstname" => "John", "lastname" => "Smith", "email" => "j@e.com"} |> Map.put(:id, 1)
+      contact =
+        %{"firstname" => "John", "lastname" => "Smith", "email" => "j@e.com"} |> Map.put(:id, 1)
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"selected_contact" => contact, "contacts" => [contact], "open" => true}
         )
+
       assert html =~ "John Smith"
     end
 
     test "renders contact from map with first_name and last_name", %{conn: conn} do
-      contact = %{ id: 2, first_name: "Alice", last_name: "Jones", email: "a@e.com" }
+      contact = %{id: 2, first_name: "Alice", last_name: "Jones", email: "a@e.com"}
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"selected_contact" => contact, "contacts" => [contact], "open" => true}
         )
+
       assert html =~ "Alice Jones"
     end
 
     test "renders contact list in open listbox", %{conn: conn} do
-      contact = %SocialScribe.Crm.Contact{id: 42, display_name: "List User", email: "list@example.com"}
+      contact = %SocialScribe.Crm.Contact{
+        id: 42,
+        display_name: "List User",
+        email: "list@example.com"
+      }
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"contacts" => [contact], "open" => true}
         )
+
       assert html =~ "List User"
       assert html =~ "list@example.com"
     end
 
     test "renders map contact with email only as fallback", %{conn: conn} do
       contact = %{"email" => "only@example.com"} |> Map.put(:id, 3)
+
       {:ok, _view, html} =
         live_isolated(conn, ContactSelectTestLive,
           session: %{"selected_contact" => contact, "open" => true}
         )
+
       assert html =~ "only@example.com"
     end
 
@@ -169,14 +185,14 @@ defmodule SocialScribeWeb.Components.ModalComponentsTest do
         live_isolated(conn, ContactSelectTestLive,
           session: %{"open" => true, "query" => "xyz", "loading" => false, "contacts" => []}
         )
+
       assert html =~ "No contacts found"
     end
 
     test "open listbox shows Searching when loading", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ContactSelectTestLive,
-          session: %{"open" => true, "loading" => true}
-        )
+        live_isolated(conn, ContactSelectTestLive, session: %{"open" => true, "loading" => true})
+
       assert html =~ "Searching..."
     end
 
@@ -263,26 +279,23 @@ defmodule SocialScribeWeb.Components.ModalComponentsTest do
 
     test "renders cancel with cancel_click", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ModalFooterTestLive,
-          session: %{"cancel_click" => "cancel_clicked"}
-        )
+        live_isolated(conn, ModalFooterTestLive, session: %{"cancel_click" => "cancel_clicked"})
+
       assert html =~ "Cancel"
       assert html =~ "phx-click"
     end
 
     test "renders info_text when set", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ModalFooterTestLive,
-          session: %{"info_text" => "Optional note here"}
-        )
+        live_isolated(conn, ModalFooterTestLive, session: %{"info_text" => "Optional note here"})
+
       assert html =~ "Optional note here"
     end
 
     test "renders disabled submit when disabled true", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, ModalFooterTestLive,
-          session: %{"disabled" => true}
-        )
+        live_isolated(conn, ModalFooterTestLive, session: %{"disabled" => true})
+
       assert html =~ "disabled"
     end
   end

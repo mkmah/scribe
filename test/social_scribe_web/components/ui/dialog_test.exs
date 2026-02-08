@@ -132,7 +132,8 @@ defmodule SocialScribeWeb.Components.UI.DialogTest do
       assert html =~ "Footer button"
     end
 
-    test "dialog with inner_block when no content slot uses dialog_header, dialog_description, dialog_footer", %{conn: conn} do
+    test "dialog with inner_block when no content slot uses dialog_header, dialog_description, dialog_footer",
+         %{conn: conn} do
       {:ok, _view, html} = live_isolated(conn, DialogInnerBlockAndSubcomponentsTestLive, [])
       assert html =~ "inner-block-dialog"
       assert html =~ "Header Title"

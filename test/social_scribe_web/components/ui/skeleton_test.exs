@@ -84,9 +84,7 @@ defmodule SocialScribeWeb.Components.UI.SkeletonTest do
 
     test "skeleton_table renders rows and columns", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, SkeletonTableTestLive,
-          session: %{"rows" => 2, "columns" => 3}
-        )
+        live_isolated(conn, SkeletonTableTestLive, session: %{"rows" => 2, "columns" => 3})
 
       assert html =~ "animate-pulse"
       assert html =~ "rounded"

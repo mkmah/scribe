@@ -8,6 +8,7 @@ defmodule SocialScribe.PosterTest do
   describe "post_on_social_media/3" do
     test "returns error for unsupported platform" do
       user = user_fixture()
+
       assert {:error, "Unsupported platform"} =
                Poster.post_on_social_media(:twitter, "content", user)
     end
@@ -24,6 +25,7 @@ defmodule SocialScribe.PosterTest do
 
     test "LinkedIn: posts successfully when user has LinkedIn credential" do
       user = user_fixture()
+
       _cred =
         user_credential_fixture(%{
           user_id: user.id,
@@ -44,6 +46,7 @@ defmodule SocialScribe.PosterTest do
 
     test "LinkedIn: returns error when API fails" do
       user = user_fixture()
+
       user_credential_fixture(%{
         user_id: user.id,
         provider: "linkedin",
@@ -70,6 +73,7 @@ defmodule SocialScribe.PosterTest do
 
     test "Facebook: posts successfully when user has selected Facebook page credential" do
       user = user_fixture()
+
       _page_cred =
         facebook_page_credential_fixture(%{
           user_id: user.id,
@@ -91,6 +95,7 @@ defmodule SocialScribe.PosterTest do
 
     test "Facebook: returns error when API fails" do
       user = user_fixture()
+
       facebook_page_credential_fixture(%{
         user_id: user.id,
         selected: true,

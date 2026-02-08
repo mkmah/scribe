@@ -94,7 +94,11 @@ defmodule SocialScribeWeb.Components.UI.AlertTest do
     test "renders alert with destructive variant", %{conn: conn} do
       {:ok, _view, html} =
         live_isolated(conn, AlertTestLive,
-          session: %{"variant" => "destructive", "title" => "Error", "description" => "Something went wrong."}
+          session: %{
+            "variant" => "destructive",
+            "title" => "Error",
+            "description" => "Something went wrong."
+          }
         )
 
       assert html =~ "Error"
@@ -133,7 +137,9 @@ defmodule SocialScribeWeb.Components.UI.AlertTest do
 
     test "toast renders with id and optional title", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, AlertToastTestLive, session: %{"id" => "my-toast", "title" => "Notice"})
+        live_isolated(conn, AlertToastTestLive,
+          session: %{"id" => "my-toast", "title" => "Notice"}
+        )
 
       assert html =~ "my-toast"
       assert html =~ "Notice"
@@ -164,6 +170,7 @@ defmodule SocialScribeWeb.Components.UI.AlertTest do
         live_isolated(conn, AlertFlashTestLive,
           session: %{"flash" => %{"error" => "Something failed"}, "kind" => :error}
         )
+
       assert html =~ "Something failed"
     end
 
@@ -172,6 +179,7 @@ defmodule SocialScribeWeb.Components.UI.AlertTest do
         live_isolated(conn, AlertFlashTestLive,
           session: %{"flash" => %{"success" => "Done"}, "kind" => :success}
         )
+
       assert html =~ "Done"
     end
 
@@ -180,14 +188,14 @@ defmodule SocialScribeWeb.Components.UI.AlertTest do
         live_isolated(conn, AlertFlashTestLive,
           session: %{"flash" => %{"warning" => "Careful"}, "kind" => :warning}
         )
+
       assert html =~ "Careful"
     end
 
     test "toast with show true has phx-mounted", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, AlertToastTestLive,
-          session: %{"id" => "t1", "show" => true}
-        )
+        live_isolated(conn, AlertToastTestLive, session: %{"id" => "t1", "show" => true})
+
       assert html =~ "phx-mounted"
     end
   end

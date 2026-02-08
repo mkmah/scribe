@@ -7,7 +7,12 @@ defmodule SocialScribe.Workers.HubspotTokenRefresherTest do
 
   setup do
     # HubspotTokenRefresher.refresh_credential calls Tesla to HubSpot token URL
-    body = %{"access_token" => "new_token", "refresh_token" => "new_refresh", "expires_in" => 3600}
+    body = %{
+      "access_token" => "new_token",
+      "refresh_token" => "new_refresh",
+      "expires_in" => 3600
+    }
+
     Tesla.Mock.mock(fn _ -> %Tesla.Env{status: 200, body: body} end)
 
     # HubspotTokenRefresher.refresh_token reads Ueberauth HubSpot config

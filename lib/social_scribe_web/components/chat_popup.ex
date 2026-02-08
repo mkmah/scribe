@@ -100,7 +100,7 @@ defmodule SocialScribeWeb.ChatPopup do
         |> assign(:current_conversation, conversation)
         |> assign(:loading, true)
 
-      ask_fn = Application.get_env(:social_scribe_web, :chat_ask_fn) || &Chat.ask/3
+      ask_fn = Application.get_env(:social_scribe_web, :chat_ask_fn) || (&Chat.ask/3)
 
       case ask_fn.(conversation.id, message, user.id) do
         {:ok, %{user_message: _user_msg, assistant_message: _assistant_msg}} ->

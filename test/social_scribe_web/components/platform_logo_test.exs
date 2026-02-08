@@ -11,6 +11,7 @@ defmodule SocialScribeWeb.Components.PlatformLogoTest do
     def mount(_params, session, socket) do
       meeting_url = session["meeting_url"] || "https://meet.google.com/abc"
       recall_bot = %{meeting_url: meeting_url}
+
       {:ok,
        socket
        |> Phoenix.LiveView.Utils.assign(:recall_bot, recall_bot)

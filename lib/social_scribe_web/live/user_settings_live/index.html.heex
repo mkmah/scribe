@@ -104,7 +104,7 @@
           value={value}
           tabs_id="settings-tabs"
         >
-          <%= label %>
+          {label}
         </.tabs_trigger>
       </.tabs_list>
     </:list>
@@ -124,14 +124,14 @@
     <:content value="crm">
       <div class="space-y-2">
         <.integration_section
-          name="HubSpot"  
+          name="HubSpot"
           description="Contacts, deals & meeting notes"
           icon={:hubspot}
           accounts={@hubspot_accounts}
           connect_path={~p"/auth/hubspot"}
         />
         <.integration_section
-          name="Salesforce"  
+          name="Salesforce"
           description="Contacts, opportunities & notes"
           icon={:salesforce}
           accounts={@salesforce_accounts}

@@ -35,22 +35,20 @@
             </div>
             <div>
               <h3 class="mb-2 text-sm font-medium text-muted-foreground">
-                Attendees (<%= Enum.count(@meeting.meeting_participants) %>)
+                Attendees ({Enum.count(@meeting.meeting_participants)})
               </h3>
               <%= if Enum.any?(@meeting.meeting_participants) do %>
                 <div class="flex items-center gap-2">
                   <div class="flex items-center gap-1 -space-x-2.5 overflow-hidden">
                     <%= for participant <- Enum.take(@meeting.meeting_participants, 8) do %>
                       <% color = participant_color(participant.name) %>
-                      <.tooltip
-                        content={
-                          if participant.is_host do
-                            "#{participant.name || "Unknown"} (Host)"
-                          else
-                            participant.name || "Unknown"
-                          end
-                        }
-                      >
+                      <.tooltip content={
+                        if participant.is_host do
+                          "#{participant.name || "Unknown"} (Host)"
+                        else
+                          participant.name || "Unknown"
+                        end
+                      }>
                         <div class={"relative inline-flex shrink-0 #{color.bg}"}>
                           <span class={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium #{color.text} ring-2 ring-background"}>
                             {String.at(participant.name || "?", 0) |> String.upcase()}
@@ -60,7 +58,7 @@
                     <% end %>
                     <%= if Enum.count(@meeting.meeting_participants) > 8 do %>
                       <span class="flex items-center justify-center w-8 h-8 text-xs font-medium rounded-full bg-muted text-muted-foreground ring-2 ring-background shrink-0">
-                        +<%= Enum.count(@meeting.meeting_participants) - 8 %>
+                        +{Enum.count(@meeting.meeting_participants) - 8}
                       </span>
                     <% end %>
                   </div>
@@ -82,7 +80,7 @@
             <%= for entry <- @crm_entries do %>
               <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{entry.provider}"}>
                 <.button class={entry.button_class}>
-                  Update <%= entry.label %>
+                  Update {entry.label}
                 </.button>
               </.link>
             <% end %>
@@ -119,10 +117,7 @@
                 rows={6}
               />
             </.form_field>
-            <.clipboard_button
-              id="follow-up-email-button"
-              text={@meeting.follow_up_email || ""}
-            />
+            <.clipboard_button id="follow-up-email-button" text={@meeting.follow_up_email || ""} />
           </.form>
         <% end %>
       </.card_content>
@@ -151,7 +146,9 @@
           <% @user_has_automations -> %>
             <div class="flex items-center justify-between">
               <p class="text-sm text-muted-foreground">
-                <%= if Enum.any?(@automation_results), do: "Generation failed. Try again?", else: "No posts generated yet." %>
+                {if Enum.any?(@automation_results),
+                  do: "Generation failed. Try again?",
+                  else: "No posts generated yet."}
               </p>
               <.button
                 variant="outline"
@@ -210,7 +207,7 @@
     on_cancel={JS.patch(~p"/dashboard/meetings/#{@meeting}")}
   >
     <:header>
-      <.dialog_title>Update <%= @crm_modal_provider_label %></.dialog_title>
+      <.dialog_title>Update {@crm_modal_provider_label}</.dialog_title>
     </:header>
     <:content>
       <.live_component
@@ -231,7 +228,7 @@
   on_cancel={SocialScribeWeb.UI.Dialog.hide_modal("attendees-modal")}
 >
   <:header>
-    <.dialog_title>Attendees (<%= Enum.count(@meeting.meeting_participants) %>)</.dialog_title>
+    <.dialog_title>Attendees ({Enum.count(@meeting.meeting_participants)})</.dialog_title>
   </:header>
   <:content>
     <%= if Enum.any?(@meeting.meeting_participants) do %>
@@ -245,7 +242,9 @@
                   {String.at(participant.name || "?", 0) |> String.upcase()}
                 </span>
               </div>
-              <span class={"text-sm truncate #{color.text}"}>{participant.name || "Unknown"}</span>
+              <span class={"text-sm truncate #{color.text}"}>
+                {participant.name || "Unknown"}
+              </span>
             </div>
             <%= if participant.is_host do %>
               <.badge variant="outline" class="text-xs shrink-0">Host</.badge>

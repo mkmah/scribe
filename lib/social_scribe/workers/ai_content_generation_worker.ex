@@ -9,7 +9,9 @@ defmodule SocialScribe.Workers.AIContentGenerationWorker do
   require Logger
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"meeting_id" => meeting_id, "action" => "regenerate_automations"}}) do
+  def perform(%Oban.Job{
+        args: %{"meeting_id" => meeting_id, "action" => "regenerate_automations"}
+      }) do
     Logger.info("Starting automation regeneration for meeting_id: #{meeting_id}")
 
     case Meetings.get_meeting_with_details(meeting_id) do

@@ -228,9 +228,9 @@ defmodule SocialScribeWeb.UserSettingsLive.Index do
       <:connection_list :if={not Enum.empty?(@accounts)}>
         <%= for account <- @accounts do %>
           <div class="flex items-center justify-between px-3 py-2 rounded-md bg-muted">
-            <p class="text-sm"><%= account.email || account.uid %></p>
+            <p class="text-sm">{account.email || account.uid}</p>
             <div class="flex items-center gap-2">
-              <%= render_slot(@extra_actions, account) %>
+              {render_slot(@extra_actions, account)}
 
               <.icon_button
                 variant="destructive"
@@ -246,12 +246,10 @@ defmodule SocialScribeWeb.UserSettingsLive.Index do
         <% end %>
       </:connection_list>
 
-      <:action
-        :if={
-          Enum.empty?(@accounts) or
-            @show_action_when_connected
-        }
-      >
+      <:action :if={
+        Enum.empty?(@accounts) or
+          @show_action_when_connected
+      }>
         <.link href={@connect_path}>
           <.button variant="outline" size="sm">
             <.icon name="hero-plus" class="w-4 h-4 mr-1" />

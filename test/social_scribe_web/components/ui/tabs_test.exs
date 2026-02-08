@@ -61,7 +61,8 @@ defmodule SocialScribeWeb.Components.UI.TabsTest do
       assert html =~ "test-tabs"
     end
 
-    test "tabs without default uses first content value, tabs_list/trigger/content variants and disabled trigger", %{conn: conn} do
+    test "tabs without default uses first content value, tabs_list/trigger/content variants and disabled trigger",
+         %{conn: conn} do
       {:ok, _view, html} = live_isolated(conn, TabsNoDefaultAndVariantsTestLive, [])
 
       assert html =~ "no-default-tabs"

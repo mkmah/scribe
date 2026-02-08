@@ -15,11 +15,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
 
     def render(assigns) do
       ~H"""
-      <.live_component
-        module={SocialScribeWeb.ChatPopup}
-        id="chat-popup"
-        current_user={@current_user}
-      />
+      <.live_component module={SocialScribeWeb.ChatPopup} id="chat-popup" current_user={@current_user} />
       """
     end
   end
@@ -72,6 +68,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> element("button[phx-value-tab=\"history\"]")
       |> render_click()
@@ -97,6 +94,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> element("button[phx-value-tab=\"history\"]")
       |> render_click()
@@ -116,6 +114,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: ""})
       |> render_submit()
@@ -128,6 +127,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: "   \n\t  "})
       |> render_submit()
@@ -143,6 +143,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: "What meetings do I have?"})
       |> render_submit()
@@ -152,7 +153,10 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       assert html =~ "Here are your meetings"
     end
 
-    test "send_message with existing conversation uses same conversation", %{conn: conn, user: user} do
+    test "send_message with existing conversation uses same conversation", %{
+      conn: conn,
+      user: user
+    } do
       SocialScribe.AIContentGeneratorMock
       |> Mox.stub(:answer_crm_question, fn _q, _ctx ->
         {:ok, "Follow-up answer."}
@@ -162,6 +166,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: "First question"})
       |> render_submit()
@@ -176,7 +181,10 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       assert html =~ "Follow-up answer"
     end
 
-    test "send_message when AI returns error still shows fallback response", %{conn: conn, user: user} do
+    test "send_message when AI returns error still shows fallback response", %{
+      conn: conn,
+      user: user
+    } do
       SocialScribe.AIContentGeneratorMock
       |> Mox.stub(:answer_crm_question, fn _q, _ctx -> {:error, :stubbed} end)
 
@@ -184,6 +192,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: "Test"})
       |> render_submit()
@@ -206,6 +215,7 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
         live_isolated(conn, WrapperLive, session: %{"current_user" => user})
 
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
+
       view
       |> form("form[phx-submit=\"send_message\"]", %{message: "Test"})
       |> render_submit()
