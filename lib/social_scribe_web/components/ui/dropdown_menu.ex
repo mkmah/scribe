@@ -163,9 +163,9 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
       data-variant={@variant}
       class={
         [
-          "relative flex cursor-pointer select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-none transition-colors",
-          # Negative margins to extend hover to container edges
-          "-mx-1",
+          "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+          # Negative margins to extend hover to container edges (matches p-1 of dropdown_menu_content)
+          "py-1 px-2",
           # Default hover and focus styles
           "hover:bg-accent hover:text-accent-foreground",
           "focus:bg-accent focus:text-accent-foreground",
@@ -204,7 +204,7 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
 
   def dropdown_menu_label(assigns) do
     ~H"""
-    <div class={["px-2 py-1.5 text-sm font-semibold", @class]}>
+    <div class={["px-1 py-1.5 text-sm font-semibold", @class]}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -232,7 +232,7 @@ defmodule SocialScribeWeb.UI.DropdownMenu do
 
   def dropdown_menu_group(assigns) do
     ~H"""
-    <div class={["py-1", @class]} role="group">
+    <div class={@class} role="group">
       {render_slot(@inner_block)}
     </div>
     """

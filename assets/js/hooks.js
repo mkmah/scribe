@@ -302,6 +302,11 @@ Hooks.MentionInput = {
         this.atSymbolIndex = -1
         this.isContentEditable = this.el.getAttribute("contenteditable") === "true"
         this.participants = []
+        // Store content to preserve across LiveView updates
+        this._storedContent = null
+        this._storedCursorPos = null
+        this._isRestoring = false
+        this._restorationTimeout = null
 
         // Load participants from form data attribute (HTML-unescaped by the browser)
         const form = this.el.closest("form")
@@ -314,7 +319,73 @@ Hooks.MentionInput = {
         }
 
         this._setupEventListeners()
+        this._setupMutationObserver()
         this._cleanupEmptyNodes()
+    },
+
+    updated() {
+        // When LiveView updates, the textarea might get cleared
+        // Use the mutation observer to restore content
+        // The observer will handle the restoration after all patches are applied
+    },
+
+    _setupMutationObserver() {
+        // Watch for LiveView patches that might clear our content
+        this._observer = new MutationObserver((mutations) => {
+            if (this._isRestoring) return
+            if (this._storedContent === null) return
+
+            const currentHTML = this.el.innerHTML
+            const currentText = this._getTextContentFromHTML(currentHTML)
+            const storedText = this._getTextContentFromHTML(this._storedContent)
+            const hasPills = this.el.querySelector(".mention-pill") !== null
+
+            console.log('[MutationObserver] currentText:', currentText, 'storedText:', storedText, 'hasPills:', hasPills)
+
+            // Only restore if content was cleared and we had something stored
+            if (storedText && !currentText.trim() && !hasPills) {
+                this._isRestoring = true
+                console.log('[MutationObserver] Restoring content:', this._storedContent)
+                this.el.innerHTML = this._storedContent
+                if (this._storedCursorPos !== null) {
+                    this._setCaretPosition(this._storedCursorPos)
+                }
+
+                // Keep stored content for a bit longer in case there are more updates
+                setTimeout(() => {
+                    this._storedContent = null
+                    this._storedCursorPos = null
+                    this._isRestoring = false
+                }, 100)
+            }
+        })
+
+        this._observer.observe(this.el, {
+            childList: true,
+            characterData: true,
+            subtree: true
+        })
+    },
+
+    destroyed() {
+        if (this._observer) {
+            this._observer.disconnect()
+        }
+    },
+
+    _getTextContentFromHTML(html) {
+        // Extract text content from HTML string (excluding pills)
+        const div = document.createElement("div")
+        div.innerHTML = html
+        // Remove all mention pills
+        div.querySelectorAll(".mention-pill").forEach(pill => pill.remove())
+        return div.textContent.trim()
+    },
+
+    _storeContentState() {
+        // Store current content and cursor position before LiveView update
+        this._storedContent = this.el.innerHTML
+        this._storedCursorPos = this._getCaretPosition()
     },
 
     _cleanupEmptyNodes() {
@@ -415,6 +486,27 @@ Hooks.MentionInput = {
                 const text = e.clipboardData.getData("text/plain")
                 document.execCommand("insertText", false, text)
             })
+
+            // Store content state before events that cause LiveView re-renders
+            // Find the "Add context" button and intercept its click
+            const form = this.el.closest("form")
+            if (form) {
+                const addContextBtn = form.querySelector('[phx-click="toggle_context_menu"]')
+                if (addContextBtn) {
+                    addContextBtn.addEventListener("click", () => {
+                        this._storeContentState()
+                    })
+                }
+
+                // Also store content when clicking participant items in context menu
+                // Use event delegation on the form to handle dynamic menu items
+                form.addEventListener("click", (e) => {
+                    const participantBtn = e.target.closest('[phx-click="add_participant_context"]')
+                    if (participantBtn) {
+                        this._storeContentState()
+                    }
+                })
+            }
         } else {
             // Fallback for textarea
             this.el.addEventListener("input", (e) => {
@@ -582,13 +674,68 @@ Hooks.MentionInput = {
             if (selection.rangeCount) {
                 const range = selection.getRangeAt(0)
                 const br = document.createElement("br")
-                range.deleteContents()
                 range.insertNode(br)
-                // Move cursor after the <br>
-                range.setStartAfter(br)
-                range.collapse(true)
+
+                // Add another <br> after if at end of container to ensure line break is visible
+                // This is needed because a single trailing <br> may not render in some browsers
+                const nextNode = br.nextSibling
+                if (!nextNode || (nextNode.nodeType === Node.TEXT_NODE && nextNode.textContent === "")) {
+                    const extraBr = document.createElement("br")
+                    br.parentNode.insertBefore(extraBr, br.nextSibling)
+                    // Move cursor after the first <br> (between the two <br> elements)
+                    range.setStartAfter(br)
+                    range.setEndBefore(extraBr)
+                } else {
+                    // Move cursor after the <br>
+                    range.setStartAfter(br)
+                    range.collapse(true)
+                }
                 selection.removeAllRanges()
                 selection.addRange(range)
+            }
+            return
+        }
+
+        // Handle Enter (without shift) to submit form if message is not empty
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault()
+            e.stopPropagation()
+            
+            // Check if message has content
+            const text = this._getTextContent().trim()
+            if (!text) {
+                // Empty message, do nothing
+                return
+            }
+            
+            // Sync content to hidden input and submit form
+            const hiddenInput = document.getElementById("chat-popup-message-input")
+            if (hiddenInput) {
+                // Use the same recursive traversal logic
+                const traverse = (node) => {
+                    if (node.nodeType === Node.TEXT_NODE) return node.textContent
+                    if (node.classList?.contains("mention-pill")) return "@" + (node.dataset.mention || "")
+                    let s = ""
+                    for (const child of node.childNodes) s += traverse(child)
+                    return s
+                }
+                const extractedText = traverse(this.el).trim()
+                if (extractedText) {
+                    hiddenInput.value = extractedText
+                } else {
+                    hiddenInput.value = ""
+                }
+            }
+            
+            // Check if form is already submitting (prevent duplicate submissions)
+            const form = this.el.closest("form")
+            if (form && !form.hasAttribute("data-submitting")) {
+                form.setAttribute("data-submitting", "true")
+                form.requestSubmit()
+                // Remove the flag after a short delay to allow re-submission if needed
+                setTimeout(() => {
+                    form.removeAttribute("data-submitting")
+                }, 1000)
             }
             return
         }
@@ -606,6 +753,10 @@ Hooks.MentionInput = {
 
         const pill = this._createPillElement(name)
         const range = document.createRange()
+        const sel = window.getSelection()
+
+        // Ensure contenteditable is clean before inserting
+        this._cleanupEmptyNodes()
 
         if (startIndex === cursorPos) {
             // From "Add context": insert at cursor (collapsed range)
@@ -623,16 +774,17 @@ Hooks.MentionInput = {
         }
 
         range.deleteContents()
-        range.insertNode(pill)
-        range.setStartAfter(pill)
-        range.collapse(true)
-        range.insertNode(document.createTextNode(" "))
-        range.setStartAfter(pill.nextSibling)
-        range.collapse(true)
 
-        const sel = window.getSelection()
+        // Insert pill
+        range.insertNode(pill)
+
+        // Create new range for cursor positioning after pill
+        const newRange = document.createRange()
+        newRange.setStartAfter(pill)
+        newRange.collapse(true)
+
         sel.removeAllRanges()
-        sel.addRange(range)
+        sel.addRange(newRange)
 
         this.mentions.push({ name, index: this.mentions.length })
         this.el.dataset.mentions = this.mentions.map(m => m.name).join(",")
@@ -681,17 +833,20 @@ Hooks.MentionInput = {
     },
 
     _createPillElement(name) {
+        // Trim whitespace to avoid display issues
+        const trimmedName = name.trim()
+
         const wrapper = document.createElement("span")
         wrapper.className = "mention-pill"
         wrapper.contentEditable = "false"
-        wrapper.dataset.mention = name
+        wrapper.dataset.mention = trimmedName
 
         const avatar = document.createElement("span")
         avatar.className = "mention-pill-avatar"
-        avatar.textContent = name.charAt(0).toUpperCase()
+        avatar.textContent = trimmedName.charAt(0).toUpperCase()
 
         const nameSpan = document.createElement("span")
-        nameSpan.textContent = name
+        nameSpan.textContent = trimmedName
 
         wrapper.appendChild(avatar)
         wrapper.appendChild(nameSpan)
@@ -1020,22 +1175,49 @@ Hooks.MentionSync = {
             const textarea = document.getElementById("chat-popup-textarea")
             if (!textarea) return
 
-            // Extract text with @mentions
-            let text = ""
-            for (const child of textarea.childNodes) {
-                if (child.classList?.contains("mention-pill")) {
-                    text += "@" + child.dataset.mention
-                } else if (child.nodeType === Node.TEXT_NODE) {
-                    text += child.textContent
-                }
+            // Extract text with @mentions using recursive traversal
+            const traverse = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) return node.textContent
+                if (node.classList?.contains("mention-pill")) return "@" + (node.dataset.mention || "")
+                let s = ""
+                for (const child of node.childNodes) s += traverse(child)
+                return s
             }
-
-            this.el.value = text.trim()
+            
+            const text = traverse(textarea).trim()
+            
+            // Only sync if there's actual content (not empty or whitespace-only)
+            if (text) {
+                this.el.value = text
+            } else {
+                this.el.value = ""
+            }
         }
 
         // Sync on form submit
         form.addEventListener("submit", (e) => {
+            // Prevent duplicate submissions
+            if (form.hasAttribute("data-submitting")) {
+                e.preventDefault()
+                return false
+            }
+            
+            // Sync content before submit
             this._syncContent()
+            
+            // Check if message is empty after syncing
+            if (!this.el.value || !this.el.value.trim()) {
+                e.preventDefault()
+                return false
+            }
+            
+            // Mark form as submitting
+            form.setAttribute("data-submitting", "true")
+            
+            // Remove the flag after a delay to allow re-submission if needed
+            setTimeout(() => {
+                form.removeAttribute("data-submitting")
+            }, 1000)
         })
 
         // Also sync on input to keep hidden input updated

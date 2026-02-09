@@ -18,5 +18,6 @@ defmodule SocialScribe.Meetings.MeetingParticipant do
     participant
     |> cast(attrs, [:recall_participant_id, :name, :is_host, :meeting_id])
     |> validate_required([:recall_participant_id, :name, :meeting_id])
+    |> update_change(:name, &String.trim/1)
   end
 end

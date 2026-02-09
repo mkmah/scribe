@@ -9,10 +9,83 @@ defmodule SocialScribeWeb.ChatPopup do
   alias SocialScribe.Meetings
 
   @impl true
+  def handle_info({:chat_response, conversation_id, result}, socket) do
+    require Logger
+    Logger.debug("ChatPopup: Received chat_response for conversation #{conversation_id}")
+
+    # Handle async chat response
+    # Only process if this is still the current conversation
+    current_conv_id =
+      socket.assigns.current_conversation && socket.assigns.current_conversation.id
+
+    if current_conv_id == conversation_id do
+      Logger.debug("ChatPopup: Processing chat_response - conversation matches")
+
+      case result do
+        {:ok, %{user_message: _user_msg, assistant_message: _assistant_msg}} ->
+          messages = Chat.get_conversation_messages(conversation_id)
+          conversations = Chat.list_conversations(socket.assigns.current_user.id)
+
+          socket =
+            socket
+            |> assign(:messages, messages)
+            |> assign(:conversations, conversations)
+            |> assign(:loading, false)
+
+          Logger.debug("ChatPopup: Updated messages, loading set to false")
+          {:noreply, socket}
+
+        {:error, reason} ->
+          Logger.error("ChatPopup: Error in chat_response: #{inspect(reason)}")
+          socket = assign(socket, :loading, false)
+          {:noreply, socket}
+      end
+    else
+      Logger.debug(
+        "ChatPopup: Conversation mismatch - current: #{inspect(current_conv_id)}, response: #{conversation_id}"
+      )
+
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:chat_error, _conversation_id, _error}, socket) do
+    require Logger
+    Logger.error("ChatPopup: Chat error occurred")
+    socket = assign(socket, :loading, false)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(_msg, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
   def update(assigns, socket) do
+    socket = assign(socket, assigns)
+
+    # Handle chat response from parent LiveView via send_update
+    socket =
+      if Map.has_key?(assigns, :chat_response) do
+        {conversation_id, result} = assigns.chat_response
+        handle_chat_response(conversation_id, result, socket)
+      else
+        socket
+      end
+
+    # Handle chat error from parent LiveView via send_update
+    socket =
+      if Map.has_key?(assigns, :chat_error) do
+        {conversation_id, error} = assigns.chat_error
+        handle_chat_error(conversation_id, error, socket)
+      else
+        socket
+      end
+
     socket =
       socket
-      |> assign(assigns)
       |> assign_new(:open, fn -> false end)
       |> assign_new(:active_tab, fn -> :chat end)
       |> assign_new(:conversations, fn -> [] end)
@@ -26,6 +99,35 @@ defmodule SocialScribeWeb.ChatPopup do
       |> assign_new(:mentions, fn -> [] end)
 
     {:ok, socket}
+  end
+
+  # Handle chat response from async task (via send_update)
+  defp handle_chat_response(conversation_id, result, socket) do
+    current_conv_id =
+      socket.assigns.current_conversation && socket.assigns.current_conversation.id
+
+    if current_conv_id == conversation_id do
+      case result do
+        {:ok, %{user_message: _user_msg, assistant_message: _assistant_msg}} ->
+          messages = Chat.get_conversation_messages(conversation_id)
+          conversations = Chat.list_conversations(socket.assigns.current_user.id)
+
+          socket
+          |> assign(:messages, messages)
+          |> assign(:conversations, conversations)
+          |> assign(:loading, false)
+
+        {:error, _reason} ->
+          assign(socket, :loading, false)
+      end
+    else
+      socket
+    end
+  end
+
+  # Handle chat error from async task (via send_update)
+  defp handle_chat_error(_conversation_id, _error, socket) do
+    assign(socket, :loading, false)
   end
 
   @impl true
@@ -102,33 +204,63 @@ defmodule SocialScribeWeb.ChatPopup do
             conv
         end
 
+      # Get current messages and add user message optimistically to UI
+      current_messages = Chat.get_conversation_messages(conversation.id)
+
+      # Create temporary user message for optimistic UI update
+      optimistic_user_message = %{
+        id: :temp,
+        role: "user",
+        content: message,
+        inserted_at: DateTime.utc_now(),
+        conversation_id: conversation.id
+      }
+
+      messages = current_messages ++ [optimistic_user_message]
+      conversations = Chat.list_conversations(user.id)
+
       socket =
         socket
         |> assign(:current_conversation, conversation)
+        |> assign(:messages, messages)
+        |> assign(:conversations, conversations)
         |> assign(:loading, true)
 
+      # Make AI call async (Chat.ask will create the actual user message in DB)
       ask_fn = Application.get_env(:social_scribe_web, :chat_ask_fn) || (&Chat.ask/3)
 
-      case ask_fn.(conversation.id, message, user.id) do
-        {:ok, %{user_message: _user_msg, assistant_message: _assistant_msg}} ->
-          messages = Chat.get_conversation_messages(conversation.id)
-          conversations = Chat.list_conversations(user.id)
+      # Spawn async task that sends message to LiveView process
+      # The LiveView will forward it to this component via handle_info
+      live_view_pid = self()
+      require Logger
 
-          socket =
-            socket
-            |> assign(:messages, messages)
-            |> assign(:conversations, conversations)
-            |> assign(:loading, false)
+      Logger.debug(
+        "ChatPopup: Starting async task for conversation #{conversation.id}, pid: #{inspect(live_view_pid)}"
+      )
 
-          {:noreply, socket}
+      Task.start(fn ->
+        try do
+          Logger.debug(
+            "ChatPopup: Task started, calling ask_fn for conversation #{conversation.id}"
+          )
 
-        {:error, _reason} ->
-          socket =
-            socket
-            |> assign(:loading, false)
+          result = ask_fn.(conversation.id, message, user.id)
 
-          {:noreply, socket}
-      end
+          Logger.debug(
+            "ChatPopup: Task completed, result: #{inspect(result)}, sending message to #{inspect(live_view_pid)}"
+          )
+
+          # Send message to LiveView process, which will handle it
+          send(live_view_pid, {:chat_response, conversation.id, result})
+          Logger.debug("ChatPopup: Message sent successfully")
+        rescue
+          e ->
+            Logger.error("ChatPopup: Failed to process chat: #{inspect(e)}")
+            send(live_view_pid, {:chat_error, conversation.id, e})
+        end
+      end)
+
+      {:noreply, socket}
     end
   end
 
@@ -230,59 +362,42 @@ defmodule SocialScribeWeb.ChatPopup do
         <%!-- Panel Header --%>
         <div class="flex-shrink-0 px-5 pt-5 pb-3">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="text-lg font-semibold tracking-tight text-foreground">Ask Anything</h2>
-            <div class="flex items-center gap-1">
-              <button
-                phx-click="new_chat"
-                phx-target={@myself}
-                class="p-1.5 text-muted-foreground hover:text-secondary-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
-                title="New chat"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              </button>
-              <button
-                phx-click="close_chat"
-                phx-target={@myself}
-                class="p-1.5 text-muted-foreground hover:text-secondary-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
-                title="Close"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5"
-                  />
-                </svg>
-              </button>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-semibold tracking-tight text-foreground">Ask Anything</h2>
             </div>
+            <button
+              phx-click="close_chat"
+              phx-target={@myself}
+              class="p-1.5 text-muted-foreground hover:text-secondary-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
+              title="Collapse"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5"
+                />
+              </svg>
+            </button>
           </div>
 
           <%!-- Tabs --%>
-          <div class="flex gap-1 border-b border-border">
+          <div class="flex items-center gap-1">
             <button
               phx-click="switch_tab"
               phx-value-tab="chat"
               phx-target={@myself}
               class={[
-                "text-sm font-medium px-3 py-2 rounded-t-lg transition-colors cursor-pointer",
+                "text-sm font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer",
                 if(@active_tab == :chat,
-                  do: "text-foreground bg-muted/80 border border-border border-b-0 -mb-px",
+                  do: "text-foreground bg-muted",
                   else: "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )
               ]}
@@ -294,14 +409,32 @@ defmodule SocialScribeWeb.ChatPopup do
               phx-value-tab="history"
               phx-target={@myself}
               class={[
-                "text-sm font-medium px-3 py-2 rounded-t-lg transition-colors cursor-pointer",
+                "text-sm font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer",
                 if(@active_tab == :history,
-                  do: "text-foreground bg-muted/80 border border-border border-b-0 -mb-px",
+                  do: "text-foreground bg-muted",
                   else: "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )
               ]}
             >
               History
+            </button>
+            <div class="flex-1"></div>
+            <button
+              phx-click="new_chat"
+              phx-target={@myself}
+              class="p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="New chat"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
             </button>
           </div>
         </div>
@@ -317,10 +450,14 @@ defmodule SocialScribeWeb.ChatPopup do
               phx-hook="ScrollToBottom"
               class="flex-1 px-5 py-4 space-y-4 overflow-y-auto scrollbar-thin"
             >
-              <%!-- Timestamp at top --%>
+              <%!-- Timestamp centered on separator line --%>
               <%= if @current_conversation do %>
-                <div class="text-center text-xs text-muted-foreground pb-2 border-b border-border mb-2">
-                  <.date_time datetime={@current_conversation.inserted_at} format="datetime" />
+                <div class="flex items-center gap-3 mb-2">
+                  <div class="flex-1 h-px bg-border"></div>
+                  <span class="text-xs text-muted-foreground whitespace-nowrap">
+                    <.date_time datetime={@current_conversation.inserted_at} format="datetime" />
+                  </span>
+                  <div class="flex-1 h-px bg-border"></div>
                 </div>
               <% end %>
 
@@ -335,28 +472,19 @@ defmodule SocialScribeWeb.ChatPopup do
                   <%= if message.role == "user" do %>
                     <div class="flex justify-end">
                       <div class="max-w-[85%] bg-muted rounded-2xl rounded-br-md px-4 py-2.5 border border-border/60 shadow-sm">
-                        <p class="text-sm leading-relaxed text-foreground">
-                          <.message_content_block content={message.content} />
-                        </p>
+                        <div class="text-sm leading-relaxed text-foreground">
+                          <.message_content_block content={message.content} role={:user} />
+                        </div>
                       </div>
                     </div>
                   <% else %>
                     <div class="flex justify-start">
                       <div class="max-w-[85%]">
-                        <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                          <.message_content_block content={message.content} />
-                        </p>
+                        <div class="text-sm leading-relaxed text-gray-700 dark:text-gray-300 markdown-content">
+                          <.message_content_block content={message.content} role={:assistant} />
+                        </div>
                         <%!-- Sources below assistant replies --%>
-                        <%= if message.metadata && message.metadata["sources"] && Enum.any?(message.metadata["sources"]) do %>
-                          <div class="flex items-center gap-1.5 mt-2">
-                            <span class="text-xs text-muted-foreground">Sources</span>
-                            <div class="flex -space-x-1">
-                              <%= for source <- message.metadata["sources"] do %>
-                                <.source_icon source={source} />
-                              <% end %>
-                            </div>
-                          </div>
-                        <% end %>
+                        <.sources_badge />
                       </div>
                     </div>
                   <% end %>
@@ -432,9 +560,9 @@ defmodule SocialScribeWeb.ChatPopup do
                       type="button"
                       phx-click="toggle_context_menu"
                       phx-target={@myself}
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/80 hover:bg-muted border border-border rounded-full transition-colors cursor-pointer"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground bg-background border border-border rounded-md transition-colors cursor-pointer shadow-sm"
                     >
-                      @ Add context
+                      <span class="text-xs">@</span> Add context
                     </button>
                   </div>
                   <%!-- Textarea --%>
@@ -449,7 +577,6 @@ defmodule SocialScribeWeb.ChatPopup do
                     phx-target={@myself}
                     class="mention-input min-h-[72px] max-h-32 overflow-y-auto w-full px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-500 focus:ring-0 scrollbar-thin"
                     data-mentions={Enum.map_join(@mentions || [], ",", & &1.name)}
-                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.closest('form').requestSubmit()}"
                   ></div>
                   <input
                     type="hidden"
@@ -459,54 +586,11 @@ defmodule SocialScribeWeb.ChatPopup do
                   />
                   <%!-- Sources + Send at bottom --%>
                   <div class="flex items-center justify-between px-3 pb-2.5">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-muted-foreground">Sources</span>
-                      <div class="flex -space-x-1.5">
-                        <div
-                          class="w-5 h-5 rounded-full bg-[#00A1E0] flex items-center justify-center ring-2 ring-white dark:ring-card"
-                          title="Salesforce"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            class="w-3 h-3"
-                            fill="white"
-                          >
-                            <path d="M17.05 2.55c-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52L6.78 10.6c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33L9.06 6.09c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l1.67 1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c-.14-.15-.22-.33-.26-.52-.13-.64.28-1.25.92-1.4.58-.04 1.11.35 1.24.92.04.19-.02.39-.13.57l-1.67 1.67c.14.15.22.33.26.52.13.64-.28 1.25-.92 1.4-.58.04-1.11-.35-1.24-.92-.04-.19.02-.39.13-.57L7.44 5.33c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57L5.22 3.98c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67z" />
-                          </svg>
-                        </div>
-                        <div
-                          class="w-5 h-5 rounded-full bg-[#FF7A59] flex items-center justify-center ring-2 ring-white dark:ring-card"
-                          title="HubSpot"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            class="w-3 h-3"
-                            fill="white"
-                          >
-                            <path d="M18.164 7.93V3.836a1.5 1.5 0 0 0-3 0v7.5h-1.5V2.336a1.5 1.5 0 0 0-3 0v9h-1.5v-7.5a1.5 1.5 0 0 0-3 0v9c0 3.244 2.175 5.977 5.143 6.807L10.664 22.5a1.5 1.5 0 0 0 3 0v-1.5c3.728 0 6.75-3.022 6.75-6.75V7.93h-2.25z" />
-                          </svg>
-                        </div>
-                        <div
-                          class="w-5 h-5 rounded-full bg-[#EA4335] flex items-center justify-center ring-2 ring-white dark:ring-card"
-                          title="Gmail"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            class="w-3 h-3"
-                            fill="white"
-                          >
-                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
+                    <.sources_badge />
                     <button
                       type="submit"
                       disabled={@loading}
-                      class="flex items-center justify-center transition-all rounded-lg cursor-pointer w-8 h-8 bg-muted hover:bg-muted/80 text-foreground border border-border disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center transition-all rounded-full cursor-pointer w-7 h-7 bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Send"
                     >
                       <svg
@@ -530,7 +614,7 @@ defmodule SocialScribeWeb.ChatPopup do
             </div>
           </div>
           <div class={[
-            "flex-1 overflow-y-auto px-5 py-4 space-y-1.5 scrollbar-thin",
+            "flex-1 overflow-y-auto px-4 py-3 scrollbar-thin",
             @active_tab != :history && "hidden"
           ]}>
             <%= if Enum.empty?(@conversations) do %>
@@ -553,20 +637,56 @@ defmodule SocialScribeWeb.ChatPopup do
                 <p class="mt-1 text-xs text-muted-foreground">Start a new chat to get started</p>
               </div>
             <% else %>
-              <button
-                :for={conv <- @conversations}
-                phx-click="load_conversation"
-                phx-value-id={conv.id}
-                phx-target={@myself}
-                class="w-full text-left px-3.5 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group cursor-pointer"
-              >
-                <p class="text-sm font-medium text-gray-800 truncate dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                  {conv.title}
-                </p>
-                <p class="text-xs text-muted-foreground mt-0.5">
-                  <.date_time datetime={conv.inserted_at} format="datetime" />
-                </p>
-              </button>
+              <div class="space-y-2">
+                <button
+                  :for={conv <- @conversations}
+                  phx-click="load_conversation"
+                  phx-value-id={conv.id}
+                  phx-target={@myself}
+                  class="w-full text-left px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 hover:border-border/80 transition-all group cursor-pointer flex items-start gap-3"
+                >
+                  <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4 text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
+                      />
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-foreground truncate group-hover:text-foreground">
+                      {conv.title}
+                    </p>
+                    <p class="text-xs text-muted-foreground/70 mt-0.5">
+                      <.date_time datetime={conv.inserted_at} format="datetime" />
+                    </p>
+                  </div>
+                  <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4 text-muted-foreground"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              </div>
             <% end %>
           </div>
         </div>
@@ -593,17 +713,37 @@ defmodule SocialScribeWeb.ChatPopup do
     assigns = assign(assigns, :segments, message_content_segments(assigns.content))
 
     ~H"""
-    <%= for segment <- @segments do %>
-      <%= case segment do %>
-        <% {:text, text} -> %>
-          {text}
-        <% {:mention, name} -> %>
-          <span class="mention-pill-inline">
-            <span class="mention-pill-inline-avatar">{String.first(name)}</span>
-            <span class="mention-pill-inline-name">{name}</span>
-          </span>
+    <%= if @role == :assistant do %>
+      <%!-- Render markdown for assistant messages --%>
+      <.render_assistant_markdown content={@content} />
+    <% else %>
+      <%!-- Render with mention pills for user messages --%>
+      <%= for segment <- @segments do %>
+        <%= case segment do %>
+          <% {:text, text} -> %>
+            {text}
+          <% {:mention, name} -> %>
+            <span class="mention-pill-inline">
+              <span class="mention-pill-inline-avatar">{String.first(name)}</span>
+              <span class="mention-pill-inline-name">{name}</span>
+            </span>
+        <% end %>
       <% end %>
     <% end %>
+    """
+  end
+
+  # Render markdown content to HTML using Earmark
+  defp render_assistant_markdown(assigns) do
+    content = assigns.content
+    # Convert markdown to HTML using the helper
+    html = SocialScribeWeb.Helpers.Markdown.render_markdown(content)
+
+    # Assign the raw HTML to be rendered
+    assigns = assign(assigns, :html, html)
+
+    ~H"""
+    <div>{@html}</div>
     """
   end
 
@@ -619,15 +759,19 @@ defmodule SocialScribeWeb.ChatPopup do
 
   # Source icon component for displaying data sources
   defp source_icon(assigns) do
+    # Normalize source to string (handle both atoms and strings)
+    source = if is_atom(assigns.source), do: Atom.to_string(assigns.source), else: assigns.source
+    source_lower = String.downcase(source)
+
     ~H"""
-    <%= case @source do %>
+    <%= case source_lower do %>
       <% "salesforce" -> %>
         <div
           class="w-4 h-4 rounded-full bg-[#00A1E0] flex items-center justify-center ring-1 ring-white dark:ring-card"
           title="Salesforce"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            <path d="M17.05 2.55c-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52L6.78 10.6c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33L9.06 6.09c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l1.67 1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c-.14-.15-.22-.33-.26-.52-.13-.64.28-1.25.92-1.4.58-.04 1.11.35 1.24.92.04.19-.02.39-.13.57l-1.67 1.67c.14.15.22.33.26.52.13.64-.28 1.25-.92 1.4-.58.04-1.11-.35-1.24-.92-.04-.19.02-.39.13-.57L7.44 5.33c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57L5.22 3.98c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67z" />
           </svg>
         </div>
       <% "hubspot" -> %>
@@ -636,28 +780,72 @@ defmodule SocialScribeWeb.ChatPopup do
           title="HubSpot"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <circle cx="12" cy="12" r="6" />
+            <path d="M18.164 7.93V3.836a1.5 1.5 0 0 0-3 0v7.5h-1.5V2.336a1.5 1.5 0 0 0-3 0v9h-1.5v-7.5a1.5 1.5 0 0 0-3 0v9c0 3.244 2.175 5.977 5.143 6.807L10.664 22.5a1.5 1.5 0 0 0 3 0v-1.5c3.728 0 6.75-3.022 6.75-6.75V7.93h-2.25z" />
           </svg>
         </div>
       <% "meeting" -> %>
         <div
-          class="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title="Meeting"
+          class="w-4 h-4 rounded-full bg-[#EA4335] flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title="Gmail"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+          </svg>
+        </div>
+      <% "gmail" -> %>
+        <div
+          class="w-4 h-4 rounded-full bg-[#EA4335] flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title="Gmail"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
           </svg>
         </div>
       <% _ -> %>
         <div
           class="w-4 h-4 rounded-full bg-gray-400 flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title={@source}
+          title={source}
         >
           <span class="text-[6px] font-bold text-white uppercase">
-            {String.first(@source || "?")}
+            {String.first(source || "?")}
           </span>
         </div>
     <% end %>
+    """
+  end
+
+  # Common sources badge component with faded text and overlapping icons
+  defp sources_badge(assigns) do
+    ~H"""
+    <div class="flex items-center gap-1.5">
+      <span class="text-xs text-muted-foreground/60">Sources</span>
+      <div class="flex -space-x-1">
+        <div
+          class="w-4 h-4 rounded-full bg-[#EA4335] flex items-center justify-center ring-2 ring-white dark:ring-card z-30"
+          title="Gmail"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+          </svg>
+        </div>
+        <div
+          class="w-4 h-4 rounded-full bg-[#FF7A59] flex items-center justify-center ring-2 ring-white dark:ring-card z-20"
+          title="HubSpot"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M18.164 7.93V3.836a1.5 1.5 0 0 0-3 0v7.5h-1.5V2.336a1.5 1.5 0 0 0-3 0v9h-1.5v-7.5a1.5 1.5 0 0 0-3 0v9c0 3.244 2.175 5.977 5.143 6.807L10.664 22.5a1.5 1.5 0 0 0 3 0v-1.5c3.728 0 6.75-3.022 6.75-6.75V7.93h-2.25z" />
+          </svg>
+        </div>
+        <div
+          class="w-4 h-4 rounded-full bg-[#00A1E0] flex items-center justify-center ring-2 ring-white dark:ring-card z-10"
+          title="Salesforce"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M17.05 2.55c-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52L6.78 10.6c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33L9.06 6.09c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l1.67 1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c-.14-.15-.22-.33-.26-.52-.13-.64.28-1.25.92-1.4.58-.04 1.11.35 1.24.92.04.19-.02.39-.13.57l-1.67 1.67c.14.15.22.33.26.52.13.64-.28 1.25-.92 1.4-.58.04-1.11-.35-1.24-.92-.04-.19.02-.39.13-.57L7.44 5.33c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57L5.22 3.98c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67z" />
+          </svg>
+        </div>
+      </div>
+    </div>
     """
   end
 end

@@ -145,8 +145,6 @@ defmodule SocialScribe.AIContentGenerator do
           {"field": "company", "value": "Acme Corp", "context": "Sarah said she just joined Acme Corp", "timestamp": "05:47"}
         ]
 
-        RETURN ONLY ONE suggestion per field. If the same field is mentioned multiple times in the transcript, include it only once (use the first or clearest mention). Do not duplicate fields in the array.
-
         ONLY return valid JSON, no other text.
 
         Meeting transcript:

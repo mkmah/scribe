@@ -30,6 +30,24 @@ defmodule SocialScribeWeb.AutomationLive.Show do
     end
   end
 
+  @impl true
+  def handle_info({:chat_response, conversation_id, result}, socket) do
+    # Forward chat response to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup,
+      id: "chat-popup",
+      chat_response: {conversation_id, result}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:chat_error, conversation_id, error}, socket) do
+    # Forward chat error to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup, id: "chat-popup", chat_error: {conversation_id, error})
+    {:noreply, socket}
+  end
+
   defp page_title(:show), do: "Show Automation"
   defp page_title(:edit), do: "Edit Automation"
 end

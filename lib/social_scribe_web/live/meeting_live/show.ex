@@ -232,6 +232,24 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   def handle_info({:crm_apply_updates, _, _, _, _} = msg, socket),
     do: CrmHandlers.handle_info(msg, socket)
 
+  @impl true
+  def handle_info({:chat_response, conversation_id, result}, socket) do
+    # Forward chat response to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup,
+      id: "chat-popup",
+      chat_response: {conversation_id, result}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:chat_error, conversation_id, error}, socket) do
+    # Forward chat error to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup, id: "chat-popup", chat_error: {conversation_id, error})
+    {:noreply, socket}
+  end
+
   defp build_crm_credentials(user_id) do
     configured_adapter = Application.get_env(:social_scribe, :crm_api)
 

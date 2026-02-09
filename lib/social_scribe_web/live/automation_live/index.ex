@@ -44,6 +44,24 @@ defmodule SocialScribeWeb.AutomationLive.Index do
   end
 
   @impl true
+  def handle_info({:chat_response, conversation_id, result}, socket) do
+    # Forward chat response to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup,
+      id: "chat-popup",
+      chat_response: {conversation_id, result}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:chat_error, conversation_id, error}, socket) do
+    # Forward chat error to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup, id: "chat-popup", chat_error: {conversation_id, error})
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     automation = Automations.get_automation!(id)
     {:ok, _} = Automations.delete_automation(automation)

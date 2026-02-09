@@ -9,74 +9,63 @@ Social Scribe is a powerful Elixir and Phoenix LiveView application designed to 
 ## 🌟 Key Features Implemented
 
 * **Google Calendar Integration:**
-    * Seamlessly log in with your Google Account.
-    * Connect multiple Google accounts to aggregate events from all your calendars.
-    * View your upcoming calendar events directly within the app's dashboard.
-    * Configure bot join timing in settings (default: 2 minutes before meeting).
+  * Seamlessly log in with your Google Account.
+  * Connect multiple Google accounts to aggregate events from all your calendars.
+  * View your upcoming calendar events directly within the app's dashboard.
+  * Configure bot join timing in settings (default: 2 minutes before meeting).
 * **Automated Meeting Transcription with Recall.ai:**
-    * Toggle a switch for any calendar event to have an AI notetaker attend.
-    * The app intelligently parses event details (description, location) to find Zoom or Google Meet links.
-    * Recall.ai bot joins meetings a configurable number of minutes before the start time.
-    * **Bot ID Management:** Adheres to challenge constraints by tracking individually created `bot_id`s.
-    * **Polling for Media:** Implements a robust polling mechanism (via Oban) to check bot status and retrieve transcripts/media.
+  * Toggle a switch for any calendar event to have an AI notetaker attend.
+  * The app intelligently parses event details (description, location) to find Zoom or Google Meet links.
+  * Recall.ai bot joins meetings a configurable number of minutes before the start time.
+  * **Bot ID Management:** Adheres to challenge constraints by tracking individually created `bot_id`s.
+  * **Polling for Media:** Implements a robust polling mechanism (via Oban) to check bot status and retrieve transcripts/media.
 * **AI-Powered Content Generation (Google Gemini):**
-    * Automatically drafts a follow-up email summarizing key discussion points and action items from the meeting transcript.
-    * **Custom Automations:** Users can create, view, and manage automation templates, defining custom prompts, target platforms (LinkedIn, Facebook), and descriptions.
+  * Automatically drafts a follow-up email summarizing key discussion points and action items from the meeting transcript.
+  * **Custom Automations:** Users can create, view, and manage automation templates, defining custom prompts, target platforms (LinkedIn, Facebook), and descriptions.
 * **CRM Integration (HubSpot & Salesforce):**
-    * Connect HubSpot or Salesforce via OAuth from Settings.
-    * AI analyzes meeting transcripts and suggests updates to CRM contacts.
-    * Review suggestions with side-by-side comparison (old → new values).
-    * Selectively apply updates to the CRM with one click.
+  * Connect HubSpot or Salesforce via OAuth from Settings.
+  * AI analyzes meeting transcripts and suggests updates to CRM contacts.
+  * Review suggestions with side-by-side comparison (old → new values).
+  * Selectively apply updates to the CRM with one click.
 * **CRM Chat (Ask Anything):**
-    * Ask questions about your CRM contacts using natural language.
-    * Use @mentions to reference specific contacts (e.g., "What is @John Smith's company?").
-    * AI searches connected CRMs and provides instant answers.
-    * Full conversation history with multiple chat threads.
+  * Ask questions about your CRM contacts using natural language.
+  * Use @mentions to reference specific contacts (e.g., "What is @John Smith's company?").
+  * AI searches connected CRMs and provides instant answers.
+  * Full conversation history with multiple chat threads.
 * **Social Media Integration & Posting:**
-    * Securely connect LinkedIn and Facebook accounts via OAuth on the Settings page.
-    * **Direct Posting:** Generated content can be posted directly to LinkedIn or Facebook.
+  * Securely connect LinkedIn and Facebook accounts via OAuth on the Settings page.
+  * **Direct Posting:** Generated content can be posted directly to LinkedIn or Facebook.
 * **Meeting Management & Review:**
-    * View past meetings with attendees, duration, platform detection (Zoom, Meet, Teams).
-    * Full transcripts with speaker identification.
-    * AI-generated follow-up emails and automation results.
-    * **Copy & Post Buttons:** Easy content reuse and direct posting.
+  * View past meetings with attendees, duration, platform detection (Zoom, Meet, Teams).
+  * Full transcripts with speaker identification.
+  * AI-generated follow-up emails and automation results.
+  * **Copy & Post Buttons:** Easy content reuse and direct posting.
 * **Modern Tech Stack & Background Processing:**
-    * Built with Elixir & Phoenix LiveView for a real-time, interactive experience.
-    * Utilizes Oban for robust background job processing.
-    * Secure credential management using Ueberauth.
+  * Built with Elixir & Phoenix LiveView for a real-time, interactive experience.
+  * Utilizes Oban for robust background job processing.
+  * Secure credential management using Ueberauth.
 
 ---
 
-## App Flow
+## 📸 Screenshots
 
-* **Login With Google and Meetins Sync:**
-    ![Auth Flow](https://youtu.be/RM7YSlu5ZDg)
+### Home Dashboard
+![Home Dashboard](readme_assets/home.png)
 
-* **Creating Automations:**
-    ![Creating Automations](https://youtu.be/V2tIKgUQYEw)
+### Meetings List
+![Meetings List](readme_assets/meetings.png)
 
-* **Meetings Recordings:**
-    ![Meetings Recording](https://youtu.be/pZrLsoCfUeA)
+### Meeting Details
+![Meeting Details](readme_assets/meeting-details.png)
 
-* **Facebook Login:**
-    ![Facebook Login](https://youtu.be/JRhPqCN-jeI)
+### Chat Interface
+![Chat Interface](readme_assets/chat-interface.png)
 
-* **Facebook Post:**
-    ![Facebook Post](https://youtu.be/4w6zpz0Rn2o)
+### CRM Settings
+![CRM Settings](readme_assets/crm-settings.png)
 
-* **LinkedIn Login & Post:**
-    ![LinkedIn Login and Post](https://youtu.be/wuD_zefGy2k)
----
-
-## 📸 Screenshots & GIFs
-
-
-* **Dashboard View:**
-    ![Dashboard View](readme_assets/dashboard_view.png)
-
-
-* **Automation Configuration UI:**
-    ![Automation Configuration](readme_assets/edit_automation.png)
+### Social Media Settings
+![Social Media Settings](readme_assets/social-media-settings.png)
 
 ---
 
@@ -101,30 +90,33 @@ Follow these steps to get SocialScribe running on your local machine.
 ### Prerequisites
 
 * Elixir
-* Erlang/OTP 
+* Erlang/OTP
 * PostgreSQL
 * Node.js (for Tailwind CSS asset compilation)
 
 ### Setup Instructions
 
-1.  **Clone the Repository:**
+1. **Clone the Repository:**
+
     ```bash
-    git clone https://github.com/fparadas/social_scribe.git 
-    cd social_scribe
+    git clone https://github.com/mkmah/scribe.git 
+    cd scribe
     ```
 
-2.  **Install Dependencies & Setup Database:**
+2. **Install Dependencies & Setup Database:**
     The `mix setup` command bundles common setup tasks.
+
     ```bash
     mix setup
     ```
+
     This will typically:
     * Install Elixir dependencies (`mix deps.get`)
     * Create your database if it doesn't exist (`mix ecto.create`)
     * Run database migrations (`mix ecto.migrate`)
     * Install Node.js dependencies for assets (`cd assets && npm install && cd ..`)
 
-3.  **Configure Environment Variables:**
+3. **Configure Environment Variables:**
     Copy `.env.example` to `.env` and fill in your credentials:
     * **Required:**
         * `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth (create at Google Cloud Console)
@@ -136,11 +128,14 @@ Follow these steps to get SocialScribe running on your local machine.
 
     See `.env.example` for the complete template.
 
-4.  **Start the Phoenix Server:**
+4. **Start the Phoenix Server:**
+
     ```bash
     mix phx.server
     ```
+
     Or, to run inside IEx (Interactive Elixir):
+
     ```bash
     iex -S mix phx.server
     ```
@@ -154,13 +149,13 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 * **Connect & Sync:** Users log in with Google. The "Settings" page allows connecting multiple Google accounts, plus LinkedIn and Facebook accounts. For Facebook, after initial connection, users are guided to select a Page for posting. Calendars are synced to a database to populate the dashboard with upcoming events.
 * **Record & Transcribe:** On the dashboard, users toggle "Record Meeting?" for desired events. The system extracts meeting links (Zoom, Meet) and uses Recall.ai to dispatch a bot. A background poller (`BotStatusPoller`) checks for completed recordings and transcripts, saving the data to local `Meeting`, `MeetingTranscript`, and `MeetingParticipant` tables.
 * **AI Content Generation:**
-    * Once a meeting is processed, an `AIContentGenerationWorker` is enqueued.
-    * This worker uses Google Gemini to draft a follow-up email.
-    * It also processes all active "Automations" defined by the user. For each automation, it combines the meeting data with the user's `prompt_template` and calls Gemini to generate content (e.g., a LinkedIn post), saving it as an `AutomationResult`.
+  * Once a meeting is processed, an `AIContentGenerationWorker` is enqueued.
+  * This worker uses Google Gemini to draft a follow-up email.
+  * It also processes all active "Automations" defined by the user. For each automation, it combines the meeting data with the user's `prompt_template` and calls Gemini to generate content (e.g., a LinkedIn post), saving it as an `AutomationResult`.
 * **Social Posting:**
-    * From the "Meeting Details" page, users can view AI-generated email drafts and posts from their automations.
-    * "Copy" buttons are available.
-    * "Post" buttons allow direct posting to LinkedIn (as the user) and the selected Facebook Page (as the Page).
+  * From the "Meeting Details" page, users can view AI-generated email drafts and posts from their automations.
+  * "Copy" buttons are available.
+  * "Post" buttons allow direct posting to LinkedIn (as the user) and the selected Facebook Page (as the Page).
 
 ---
 
@@ -196,11 +191,11 @@ The CRM integration uses a generic abstraction layer that works with multiple pr
 * **Generic Component:** `CrmModalComponent` works with any CRM provider
 * **Contact Search:** Debounced search with avatar display
 * **AI Suggestion Cards:**
-    * Checkbox for selection
-    * Current value (strikethrough if exists)
-    * Arrow indicator
-    * AI-suggested new value
-    * Transcript timestamp link
+  * Checkbox for selection
+  * Current value (strikethrough if exists)
+  * Arrow indicator
+  * AI-suggested new value
+  * Transcript timestamp link
 * **Batch Updates:** Selectively apply multiple fields at once
 * **Design Match:** UI matches the specification exactly
 
@@ -216,30 +211,36 @@ The CRM integration uses a generic abstraction layer that works with multiple pr
 
 ## 📖 Documentation
 
-* **[Testing Guide](docs/testing-guide.md)** - Comprehensive testing walkthrough
-* **[Architecture](docs/architecture.md)** - System architecture and data model
-* **[Adding a New LLM Provider](docs/adding-new-llm-provider.md)** - Developer guide for integrating new AI providers
-* **[Adding a New CRM Provider](docs/adding-new-crm-provider.md)** - Developer guide for integrating new CRM systems
+### Getting Started
 
----
+[Testing Guide](docs/testing-guide.md) - Comprehensive testing walkthrough  
+[Deployment Guide](docs/deployment.md) - Deploy to Fly.io with step-by-step instructions
 
-## ⚠️ Known Issues & Limitations
+### Architecture & Design
 
-* **Facebook Posting & App Review:**
-    * Posting to Facebook is implemented via the Graph API to a user-managed Page.
-    * Full functionality for all users typically requires Meta app review and Business Verification.
-    * During development, posting works reliably for app admins to Pages they manage.
-* **Calendar Sync Scope:**
-    * Currently syncs the primary Google Calendar.
-    * Multiple calendar support is structured but not fully exposed in UI.
-* **Meeting Detection:**
-    * Only syncs events with Zoom or Google Meet links (in `hangoutLink` or `location` fields).
+[Architecture](docs/architecture.md) - System architecture and data model  
+[System Design](docs/system-design.md) - UI component system (shadcn/ui-style)
+
+### CRM Integration
+
+[CRM Contacts Explained](docs/crm-contacts.md) - What contacts are and how they relate to meetings  
+[CRM Meeting Assignment](docs/crm-meeting-assignment.md) - Auto-detection and manual CRM assignment flow
+
+### Integrations
+
+[Recall.ai Webhooks](docs/recall-webhooks.md) - Real-time bot status updates via webhooks
+
+### Developer Guides
+
+[Adding a New LLM Provider](docs/adding-new-llm-provider.md) - Integrate new AI providers  
+[Adding a New CRM Provider](docs/adding-new-crm-provider.md) - Integrate new CRM systems
+
 ---
 
 ## 📚 Learn More (Phoenix Framework)
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+* Official website: <https://www.phoenixframework.org/>
+* Guides: <https://hexdocs.pm/phoenix/overview.html>
+* Docs: <https://hexdocs.pm/phoenix>
+* Forum: <https://elixirforum.com/c/phoenix-forum>
+* Source: <https://github.com/phoenixframework/phoenix>

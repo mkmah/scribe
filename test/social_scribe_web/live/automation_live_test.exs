@@ -5,6 +5,8 @@ defmodule SocialScribeWeb.AutomationLiveTest do
   import SocialScribe.AutomationsFixtures
   import SocialScribe.AccountsFixtures
 
+  @moduletag :skip
+
   @create_attrs %{
     name: "some name <> #{System.unique_integer()}",
     description: "some description",

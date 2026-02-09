@@ -205,7 +205,143 @@ defmodule SocialScribeWeb.ModalComponents do
   end
 
   # ============================================================================
-  # SUGGESTION CARD
+  # FIELD GROUP SECTION (Collapsible)
+  # ============================================================================
+
+  attr :group, :map, required: true
+  attr :expanded, :boolean, default: true
+  attr :target, :any, default: nil
+
+  @doc """
+  Renders a collapsible field group section with header showing group name,
+  selection count badge, and toggle button. Contains field rows when expanded.
+  """
+  def field_group_section(assigns) do
+    group_id =
+      assigns.group.id || assigns.group.name |> String.downcase() |> String.replace(~r/\s+/, "_")
+
+    selected_count = Enum.count(assigns.group.fields, & &1.apply)
+    total_count = length(assigns.group.fields)
+    all_selected = selected_count == total_count and total_count > 0
+
+    assigns =
+      assigns
+      |> assign(:group_id, group_id)
+      |> assign(:selected_count, selected_count)
+      |> assign(:all_selected, all_selected)
+
+    ~H"""
+    <div class="bg-muted/50 rounded-xl border border-border overflow-hidden">
+      <%!-- Group Header --%>
+      <div class="flex items-center justify-between px-4 py-3 bg-background">
+        <div class="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={@all_selected}
+            name={"group_toggle[#{@group_id}]"}
+            id={"group-toggle-#{@group_id}"}
+            value="on"
+            class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+          />
+          <span class="text-sm font-semibold text-foreground">{@group.name}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+            {@selected_count} {if @selected_count == 1, do: "update", else: "updates"} selected
+          </span>
+          <button
+            type="button"
+            phx-click="toggle_expand"
+            phx-value-group={@group_id}
+            phx-target={@target}
+            class="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            {if @expanded, do: "Hide details", else: "Show details"}
+          </button>
+        </div>
+      </div>
+
+      <%!-- Field Rows (Collapsible) --%>
+      <div :if={@expanded} class="px-4 py-3 space-y-4 border-t border-dashed border-border/50">
+        <.field_row :for={field <- @group.fields} field={field} group_id={@group_id} target={@target} />
+      </div>
+    </div>
+    """
+  end
+
+  # ============================================================================
+  # FIELD ROW
+  # ============================================================================
+
+  attr :field, :map, required: true
+  attr :group_id, :string, required: true
+  attr :target, :any, default: nil
+
+  @doc """
+  Renders an individual field row with checkbox, current/new value inputs,
+  and action links (Update mapping, Found in transcript).
+  """
+  def field_row(assigns) do
+    field_name = to_string(assigns.field.field)
+    assigns = assign(assigns, :field_name, field_name)
+
+    ~H"""
+    <div class="space-y-2">
+      <div class="text-xs font-medium text-muted-foreground">{@field.label}</div>
+      <div class="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={@field.apply}
+          name={"apply[#{@field_name}]"}
+          id={"apply-#{@field_name}"}
+          value="on"
+          class="h-4 w-4 rounded border-border text-primary focus:ring-primary flex-shrink-0"
+        />
+        <%!-- Current Value (read-only styled input) --%>
+        <div class="flex-1">
+          <input
+            type="text"
+            value={@field.current_value || "No existing value"}
+            disabled
+            class="w-full px-3 py-2 text-sm bg-muted border border-input rounded-lg text-muted-foreground cursor-not-allowed line-through"
+          />
+        </div>
+        <%!-- Arrow Indicator --%>
+        <div class="flex-shrink-0 text-muted-foreground px-2">
+          <span class="text-lg">→</span>
+        </div>
+        <%!-- New Value (editable) --%>
+        <div class="flex-1">
+          <input
+            type="text"
+            name={"values[#{@field_name}]"}
+            id={"value-#{@field_name}"}
+            value={@field.new_value}
+            placeholder="Enter new value"
+            class="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors"
+          />
+        </div>
+      </div>
+      <%!-- Action Links --%>
+      <div class="flex items-center gap-4 pl-7">
+        <button
+          type="button"
+          class="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+        >
+          Update mapping
+        </button>
+        <%= if @field[:transcript_timestamp] do %>
+          <span class="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors">
+            Found in transcript ({@field.transcript_timestamp})
+          </span>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  # ============================================================================
+  # SUGGESTION CARD (Legacy - kept for backwards compatibility)
   # ============================================================================
 
   attr :suggestion, :map, required: true

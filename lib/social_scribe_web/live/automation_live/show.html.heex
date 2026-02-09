@@ -1,57 +1,155 @@
 <div class="space-y-6">
+  <!-- Back Navigation -->
   <div>
     <.link
       href={~p"/dashboard/automations"}
-      class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+      class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
     >
-      <.chevron_left class="h-4 w-4" /> Back to Automations
+      <.chevron_left class="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+      Back to Automations
     </.link>
   </div>
+  
+<!-- Main Card -->
+  <.card class="overflow-hidden">
+    <!-- Header Section -->
+    <div class="flex items-start justify-between p-6 pb-4 border-b border-border/50">
+      <div class="flex items-center gap-4">
+        <!-- Platform Icon -->
+        <div class={[
+          "relative p-3 rounded-xl shrink-0",
+          case @automation.platform do
+            "linkedin" -> "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            "facebook" -> "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+            "twitter" -> "bg-slate-500/10 text-slate-700 dark:text-slate-300"
+            _ -> "bg-primary/10 text-primary"
+          end
+        ]}>
+          <.icon
+            name={
+              case @automation.platform do
+                "linkedin" -> "hero-linkedin"
+                "facebook" -> "hero-facebook"
+                "twitter" -> "hero-x"
+                _ -> "hero-rocket-launch"
+              end
+            }
+            class="w-6 h-6"
+          />
+        </div>
 
-  <.card>
-    <.card_header class="flex flex-row items-center justify-between space-y-0 pb-2">
-      <div>
-        <.card_title>{@automation.name}</.card_title>
-        <.card_description>Platform: {@automation.platform}</.card_description>
+        <div class="space-y-1">
+          <h1 class="text-xl font-semibold text-foreground">{@automation.name}</h1>
+          <div class="flex items-center gap-3">
+            <.badge
+              variant="secondary"
+              class={[
+                "text-xs font-medium capitalize",
+                case @automation.platform do
+                  "linkedin" ->
+                    "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+
+                  "facebook" ->
+                    "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+
+                  "twitter" ->
+                    "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20"
+
+                  _ ->
+                    ""
+                end
+              ]}
+            >
+              {@automation.platform}
+            </.badge>
+            <%= if @automation.is_active do %>
+              <span class="flex items-center gap-1.5 text-xs text-success font-medium">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75">
+                  </span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                </span>
+                Active
+              </span>
+            <% else %>
+              <span class="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                <span class="h-2 w-2 rounded-full bg-muted-foreground/40"></span> Paused
+              </span>
+            <% end %>
+          </div>
+        </div>
       </div>
+
       <.link
         patch={~p"/dashboard/automations/#{@automation}/show/edit"}
         phx-click={JS.push_focus()}
       >
-        <.button>Edit</.button>
+        <.button variant="outline" class="gap-2 shadow-sm">
+          <.icon name="hero-pencil" class="w-4 h-4" /> Edit
+        </.button>
       </.link>
-    </.card_header>
-    <.card_content class="space-y-6">
-      <div class="space-y-2">
-        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Description
-        </h3>
-        <p class="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-          {@automation.description}
-        </p>
-      </div>
-
-      <div class="space-y-2">
-        <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Example
-        </h3>
-        <div class="text-sm text-foreground leading-relaxed markdown-content">
-          {raw(render_markdown(@automation.example))}
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between pt-4 border-t">
-        <span class="text-sm font-medium text-muted-foreground">Status</span>
+    </div>
+    
+<!-- Content Section -->
+    <.card_content class="!pt-6 space-y-6">
+      <!-- Status Control (moved to top) -->
+      <div class="flex items-center justify-between p-4 rounded-lg bg-muted/30">
         <div class="flex items-center gap-3">
-          <span class="text-sm text-muted-foreground">
+          <.icon name="hero-power" class="w-5 h-5 text-muted-foreground" />
+          <div>
+            <span class="text-sm font-medium text-foreground">Automation Status</span>
+            <p class="text-xs text-muted-foreground">
+              {if @automation.is_active,
+                do: "This automation is currently running",
+                else: "This automation is paused"}
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class={[
+            "text-sm font-medium",
+            if(@automation.is_active, do: "text-success", else: "text-muted-foreground")
+          ]}>
             {if @automation.is_active, do: "Active", else: "Inactive"}
           </span>
           <.switch
-            name="automation-#{@automation.id}"
+            name={"automation-#{@automation.id}"}
             checked={@automation.is_active}
             phx-click="toggle_automation"
             phx-value-id={@automation.id}
           />
+        </div>
+      </div>
+      
+<!-- Description -->
+      <div class="space-y-3 pt-2 border-t border-border/50">
+        <div class="flex items-center gap-2">
+          <.icon name="hero-document-text" class="w-4 h-4 text-muted-foreground" />
+          <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Description
+          </h3>
+        </div>
+        <div class="pl-6">
+          <p class="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+            {@automation.description || "No description provided"}
+          </p>
+        </div>
+      </div>
+      
+<!-- Example -->
+      <div class="space-y-3">
+        <div class="flex items-center gap-2">
+          <.icon name="hero-light-bulb" class="w-4 h-4 text-muted-foreground" />
+          <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Example Output
+          </h3>
+        </div>
+        <div class="pl-6">
+          <div class="p-4 rounded-lg bg-muted/50 border border-border/50">
+            <div class="text-sm text-foreground leading-relaxed markdown-content">
+              {raw(render_markdown(@automation.example))}
+            </div>
+          </div>
         </div>
       </div>
     </.card_content>
