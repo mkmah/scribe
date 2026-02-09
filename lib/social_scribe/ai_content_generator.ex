@@ -180,58 +180,9 @@ defmodule SocialScribe.AIContentGenerator do
 
   # --- Private helpers --------------------------------------------------------
 
+  alias SocialScribe.AIContentGenerator.JsonParser
+
   defp parse_json_suggestions(response) do
-    cleaned =
-      case Regex.run(~r/```json\n?(.*?)```/s, response) do
-        [_, json_content] -> json_content
-        _ -> response
-      end
-      |> String.trim()
-
-    case Jason.decode(cleaned) do
-      {:ok, suggestions} when is_list(suggestions) ->
-        formatted =
-          suggestions
-          |> Enum.filter(&is_map/1)
-          |> Enum.map(fn s ->
-            %{
-              field: s["field"],
-              value: s["value"],
-              context: s["context"],
-              timestamp: s["timestamp"]
-            }
-          end)
-          |> Enum.filter(fn s -> s.field != nil and s.value != nil end)
-
-        {:ok, formatted}
-
-      {:ok, _} ->
-        {:ok, []}
-
-      {:error, _} ->
-        # fallback: try to look for just the array [ ... ] if previous attempts failed
-        case Regex.run(~r/\[.*\]/s, cleaned) do
-          [json_array] ->
-            case Jason.decode(json_array) do
-              {:ok, suggestions} when is_list(suggestions) ->
-                # Recursively parse the found array string
-                # But to avoid infinite recursion or complexity, let's just duplicate the formatting logic extraction
-                # ideally we refactor. For now, let's simply return empty if this fails too or just try to decode it.
-                # Let's actually just retry the whole parse_json_suggestions with the extracted array
-                # But checking for infinite loop.
-                if json_array != response do
-                  parse_json_suggestions(json_array)
-                else
-                  {:ok, []}
-                end
-
-              _ ->
-                {:ok, []}
-            end
-
-          _ ->
-            {:ok, []}
-        end
-    end
+    JsonParser.parse_suggestions(response)
   end
 end

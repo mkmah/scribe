@@ -310,13 +310,6 @@ defmodule SocialScribe.Accounts do
   end
 
   @doc """
-  Gets the user's HubSpot credential if one exists.
-  """
-  def get_user_hubspot_credential(user_id) do
-    Repo.get_by(UserCredential, user_id: user_id, provider: "hubspot")
-  end
-
-  @doc """
   Finds or creates a Salesforce credential for a user.
   Salesforce uses a single credential per org_id.
   """

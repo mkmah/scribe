@@ -45,9 +45,7 @@ mix assets.deploy               # Build and minify for production
 - Access Oban dashboard at `/dev/oban` (dev only)
 - Three queues configured: `default` (10), `ai_content` (10), `polling` (5)
 - Cron jobs in `config/config.exs`:
-  - `BotStatusPoller` every 2 minutes - polls Recall.ai for completed transcripts
-  - `CrmTokenRefresher` every 5 minutes - refreshes OAuth tokens for all CRM providers
-  - `HubspotTokenRefresher` every 5 minutes - legacy HubSpot-specific refresher (deprecated)
+- `CrmTokenRefresher` every 5 minutes - refreshes OAuth tokens for all CRM providers
 
 ## Architecture
 
@@ -104,10 +102,27 @@ config :social_scribe, :llm_provider, SocialScribe.LLM.Gemini
 ### Key Data Flow
 
 1. User toggles "Record Meeting" on calendar event → `RecallBot` created
-2. Cron job (`BotStatusPoller`) checks bot status every 2 minutes
+2. Cron job (`BotStatusPoller`) checks bot status every 2 minutes (or webhooks handle real-time updates)
 3. When bot completes → transcript saved → `AIContentGenerationWorker` enqueued to `ai_content` queue
 4. AI generates follow-up email + processes all user automations
 5. Results stored in `Meeting`, `AutomationResult` tables
+
+### Code Organization
+
+The codebase follows a modular structure:
+
+- **Contexts**: Business logic organized by domain (e.g., `Meetings`, `Accounts`, `Automations`)
+- **Sub-modules**: Large contexts are split into focused sub-modules:
+  - `Meetings.Crm` - CRM auto-detection logic
+  - `Meetings.PromptBuilder` - AI prompt generation
+  - `Meetings.ParticipantParser` - Participant data parsing
+  - `Meetings.TranscriptFormatter` - Transcript formatting
+- **Components**: UI components split by functionality:
+  - `ChatPopup.MessageList` - Message rendering
+  - `ChatPopup.MentionHandler` - Mention handling logic
+- **Utilities**: Shared utilities:
+  - `AIContentGenerator.JsonParser` - JSON parsing with multiple strategies
+  - `ErrorHandler` - Common error formatting and handling
 
 ### LiveView Architecture
 

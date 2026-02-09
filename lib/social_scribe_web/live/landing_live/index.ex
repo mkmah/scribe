@@ -45,7 +45,7 @@ defmodule SocialScribeWeb.LandingLive.Index do
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <.link
             href={~p"/auth/google"}
-            class="inline-flex items-center gap-2.5 px-6 py-3 text-base font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-all duration-150 shadow-elevated hover:shadow-elevated hover:-translate-y-0.5"
+            class="inline-flex items-center gap-2.5 px-6 py-3 text-base font-medium text-white bg-primary rounded-lg hover:bg-primary-700 transition-all duration-150 shadow-elevated hover:shadow-elevated hover:-translate-y-0.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" class="h-5 w-5">
               <path

@@ -93,7 +93,7 @@ defmodule SocialScribeWeb.MeetingLiveTest do
       # When no CRM is associated, shows "Use Salesforce" button
       assert html =~ "Use Salesforce"
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/salesforce")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/salesforce")
       assert has_element?(view, "#crm-modal-salesforce-wrapper")
     end
   end

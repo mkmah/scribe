@@ -2,7 +2,7 @@ defmodule SocialScribeWeb.DashboardLive.Index do
   use SocialScribeWeb, :live_view
 
   alias SocialScribe.Calendar
-  alias SocialScribe.CalendarSyncronizer
+  alias SocialScribe.CalendarSynchronizer
   alias SocialScribe.Bots
 
   require Logger
@@ -70,7 +70,7 @@ defmodule SocialScribeWeb.DashboardLive.Index do
 
   @impl true
   def handle_info(:sync_calendars, socket) do
-    CalendarSyncronizer.sync_events_for_user(socket.assigns.current_user)
+    CalendarSynchronizer.sync_events_for_user(socket.assigns.current_user)
 
     events = Calendar.list_upcoming_events(socket.assigns.current_user)
 

@@ -38,9 +38,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
 
         {:ok, socket}
       else
-        # Old HubSpot credential (for backward compatibility)
-        # hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
-
         # Build CRM credentials map for all registered providers
         crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
         crm_entries_to_display = get_crm_entries_to_display(crm_credentials, meeting)
@@ -61,7 +58,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
           |> assign(:meeting, meeting)
           |> assign(:automation_results, automation_results)
           |> assign(:user_has_automations, user_has_automations)
-          # |> assign(:hubspot_credential, hubspot_credential)
           |> assign(:crm_credentials, crm_credentials)
           |> assign(:crm_entries, crm_entries_to_display)
           |> assign(:crm_selection_options, crm_selection_options)
@@ -101,12 +97,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   def handle_params(params, _uri, socket) do
     {crm_modal_provider, crm_modal_provider_label} =
       case socket.assigns.live_action do
-        :hubspot ->
-          {"hubspot", Registry.provider_label("hubspot")}
-
-        :salesforce ->
-          {"salesforce", Registry.provider_label("salesforce")}
-
         :crm ->
           provider = params["provider"]
           {provider, provider && Registry.provider_label(provider)}
@@ -209,17 +199,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   end
 
   # === CRM Handlers (Delegated) ===
-
-  @impl true
-  def handle_info({:hubspot_search, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)
-
-  @impl true
-  def handle_info({:generate_suggestions, _, _, _} = msg, socket),
-    do: CrmHandlers.handle_info(msg, socket)
-
-  @impl true
-  def handle_info({:apply_hubspot_updates, _, _, _} = msg, socket),
-    do: CrmHandlers.handle_info(msg, socket)
 
   @impl true
   def handle_info({:crm_search, _, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)

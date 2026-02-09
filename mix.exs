@@ -20,10 +20,9 @@ defmodule SocialScribe.MixProject do
           SocialScribe.LinkedInApi,
           SocialScribe.Facebook,
           SocialScribe.FacebookApi,
-          SocialScribe.HubspotSuggestions,
-          SocialScribeWeb.MeetingLive.HubspotModalComponent,
           SocialScribeWeb.ChatPopup,
           SocialScribeWeb.AutomationLiveTest,
+          SocialScribeWeb.MeetingLive.CrmHandlersTest,
           ~r/^Ueberauth\.Strategy\./
         ]
       ]

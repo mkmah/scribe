@@ -15,6 +15,7 @@ kill_signal = 'SIGTERM'
 [env]
   PHX_HOST = 'social-scribe-floral-frost-8795.fly.dev'
   PORT = '8080'
+  PHX_SERVER = 'true'
 
 [http_service]
   internal_port = 8080

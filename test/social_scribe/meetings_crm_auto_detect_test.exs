@@ -60,7 +60,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
           json(%{"records" => []})
       end)
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:ok, "hubspot"} = result
     end
@@ -115,7 +115,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
           })
       end)
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:multiple_matches, providers} = result
       assert "hubspot" in providers
@@ -154,7 +154,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
           json(%{"records" => []})
       end)
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:no_matches} = result
     end
@@ -179,7 +179,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
 
       meeting = SocialScribe.Repo.preload(meeting, [:meeting_participants, calendar_event: []])
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:no_matches} = result
     end
@@ -200,7 +200,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
 
       meeting = SocialScribe.Repo.preload(meeting, [:meeting_participants, calendar_event: []])
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:no_matches} = result
     end
@@ -249,7 +249,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
           })
       end)
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:ok, "hubspot"} = result
     end
@@ -313,7 +313,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
 
       meeting = SocialScribe.Repo.preload(meeting, [:meeting_participants, calendar_event: []])
 
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
 
       assert {:no_matches} = result
     end
@@ -590,7 +590,7 @@ defmodule SocialScribe.Meetings.CrmAutoDetectTest do
       end)
 
       # Auto-detection should work normally with valid providers
-      result = Meetings.auto_detect_crm_provider(meeting)
+      result = Meetings.Crm.auto_detect_crm_provider(meeting)
       assert result == {:ok, "hubspot"}
 
       # The unknown provider error path is handled by Registry.adapter_for

@@ -10,8 +10,9 @@ defmodule SocialScribe.Meetings do
   alias SocialScribe.Meetings.MeetingTranscript
   alias SocialScribe.Meetings.MeetingParticipant
   alias SocialScribe.Bots.RecallBot
-  alias SocialScribe.Accounts
-  alias SocialScribe.Crm.Registry
+  alias SocialScribe.Meetings.Crm
+  alias SocialScribe.Meetings.PromptBuilder
+  alias SocialScribe.Meetings.ParticipantParser
 
   require Logger
 
@@ -363,10 +364,10 @@ defmodule SocialScribe.Meetings do
       {:ok, _transcript} = create_meeting_transcript(transcript_attrs)
 
       # Use participants from Recall.ai participants endpoint (includes all attendees, not just speakers)
-      participants = parse_participants_data(participants_data)
+      participants = ParticipantParser.parse_participants_data(participants_data)
 
       Enum.each(participants, fn participant_data ->
-        participant_attrs = parse_participant_attrs(meeting, participant_data)
+        participant_attrs = ParticipantParser.parse_participant_attrs(meeting, participant_data)
         create_meeting_participant(participant_attrs)
       end)
 
@@ -376,7 +377,7 @@ defmodule SocialScribe.Meetings do
       # Auto-detect CRM provider from participants (only if not already set)
       updated_meeting =
         if is_nil(meeting.crm_provider) do
-          case auto_detect_crm_provider(meeting) do
+          case Crm.auto_detect_crm_provider(meeting) do
             {:ok, provider} ->
               case update_meeting(meeting, %{crm_provider: provider}) do
                 {:ok, updated} ->
@@ -412,88 +413,6 @@ defmodule SocialScribe.Meetings do
 
       updated_meeting
     end)
-  end
-
-  @doc """
-  Attempts to auto-detect which CRM provider should be associated with a meeting
-  by searching for meeting participants in the user's connected CRMs.
-
-  Returns:
-  - `{:ok, provider}` if exactly one CRM has matching contacts
-  - `{:multiple_matches, providers}` if multiple CRMs have matches
-  - `{:no_matches}` if no matches found or no CRMs connected
-  """
-  def auto_detect_crm_provider(%Meeting{} = meeting) do
-    meeting = Repo.preload(meeting, [:meeting_participants, calendar_event: []])
-
-    user_id = meeting.calendar_event.user_id
-
-    if is_nil(user_id) do
-      {:no_matches}
-    else
-      participant_names =
-        meeting.meeting_participants
-        |> Enum.map(& &1.name)
-        |> Enum.filter(&(&1 && String.trim(&1) != ""))
-
-      if Enum.empty?(participant_names) do
-        {:no_matches}
-      else
-        detect_from_participants(user_id, participant_names)
-      end
-    end
-  end
-
-  defp detect_from_participants(user_id, participant_names) do
-    # Get all connected CRM credentials for the user
-    connected_crms =
-      Registry.crm_providers()
-      |> Enum.map(fn provider ->
-        case Accounts.get_user_crm_credential(user_id, provider) do
-          nil -> nil
-          credential -> {provider, credential}
-        end
-      end)
-      |> Enum.filter(&(&1 != nil))
-
-    if Enum.empty?(connected_crms) do
-      {:no_matches}
-    else
-      # Search for each participant name in each CRM
-      matches_per_provider =
-        Enum.reduce(participant_names, %{}, fn name, acc ->
-          Enum.reduce(connected_crms, acc, fn {provider, credential}, provider_acc ->
-            case search_contact_in_crm(provider, credential, name) do
-              {:ok, contacts} when contacts != [] ->
-                Map.update(provider_acc, provider, 1, &(&1 + 1))
-
-              _ ->
-                provider_acc
-            end
-          end)
-        end)
-
-      case Map.keys(matches_per_provider) do
-        [single_provider] ->
-          {:ok, single_provider}
-
-        [] ->
-          {:no_matches}
-
-        multiple_providers ->
-          {:multiple_matches, multiple_providers}
-      end
-    end
-  end
-
-  defp search_contact_in_crm(provider, credential, query) do
-    case Registry.adapter_for(provider) do
-      {:ok, adapter} ->
-        adapter.search_contacts(credential, query)
-
-      {:error, _} ->
-        {:error, :unknown_provider}
-    end
   end
 
   # --- Private Parser Functions ---
@@ -549,116 +468,10 @@ defmodule SocialScribe.Meetings do
     }
   end
 
-  defp parse_participant_attrs(meeting, participant_data) do
-    %{
-      meeting_id: meeting.id,
-      recall_participant_id: to_string(participant_data.id),
-      name: participant_data.name,
-      is_host: Map.get(participant_data, :is_host, false)
-    }
-  end
-
-  defp parse_participants_data(participants_data) do
-    # Participants data from Recall.ai participants_download_url
-    # Format: list of participant objects with id, name, is_host, etc.
-    case participants_data do
-      data when is_list(data) ->
-        Enum.uniq_by(data, & &1[:id])
-
-      _ ->
-        []
-    end
-  end
-
   @doc """
   Generates a prompt for a meeting.
   """
   def generate_prompt_for_meeting(%Meeting{} = meeting) do
-    case participants_to_string(meeting.meeting_participants) do
-      {:error, :no_participants} ->
-        {:error, :no_participants}
-
-      {:ok, participants_string} ->
-        case transcript_to_string(meeting.meeting_transcript) do
-          {:error, :no_transcript} ->
-            {:error, :no_transcript}
-
-          {:ok, transcript_string} ->
-            {:ok,
-             generate_prompt(
-               meeting.title,
-               meeting.recorded_at,
-               meeting.duration_seconds,
-               participants_string,
-               transcript_string
-             )}
-        end
-    end
+    PromptBuilder.generate_prompt_for_meeting(meeting)
   end
-
-  defp generate_prompt(title, date, duration, participants, transcript) do
-    """
-    ## Meeting Info:
-    title: #{title}
-    date: #{date}
-    duration: #{duration} seconds
-
-    ### Participants:
-    #{participants}
-
-    ### Transcript:
-    #{transcript}
-    """
-  end
-
-  defp participants_to_string(participants) do
-    if Enum.empty?(participants) do
-      {:error, :no_participants}
-    else
-      participants_string =
-        participants
-        |> Enum.map(fn participant ->
-          "#{participant.name} (#{if participant.is_host, do: "Host", else: "Participant"})"
-        end)
-        |> Enum.join("\n")
-
-      {:ok, participants_string}
-    end
-  end
-
-  defp transcript_to_string(%MeetingTranscript{content: %{"data" => transcript_data}})
-       when not is_nil(transcript_data) do
-    {:ok, format_transcript_for_prompt(transcript_data)}
-  end
-
-  defp transcript_to_string(_), do: {:error, :no_transcript}
-
-  defp format_transcript_for_prompt(transcript_segments) when is_list(transcript_segments) do
-    Enum.map_join(transcript_segments, "\n", fn segment ->
-      speaker = Map.get(segment, "speaker", "Unknown Speaker")
-      words = Map.get(segment, "words", [])
-      text = Enum.map_join(words, " ", &Map.get(&1, "text", ""))
-      timestamp = format_timestamp(List.first(words))
-      "[#{timestamp}] #{speaker}: #{text}"
-    end)
-  end
-
-  defp format_transcript_for_prompt(_), do: ""
-
-  defp format_timestamp(nil), do: "00:00"
-
-  defp format_timestamp(word) do
-    seconds = extract_seconds(Map.get(word, "start_timestamp"))
-    total_seconds = trunc(seconds)
-    minutes = div(total_seconds, 60)
-    secs = rem(total_seconds, 60)
-
-    "#{String.pad_leading(Integer.to_string(minutes), 2, "0")}:#{String.pad_leading(Integer.to_string(secs), 2, "0")}"
-  end
-
-  # Handle map format: %{"absolute" => "...", "relative" => 41.911842}
-  defp extract_seconds(%{"relative" => relative}) when is_number(relative), do: relative
-  # Handle direct float format: 0.48204318
-  defp extract_seconds(seconds) when is_number(seconds), do: seconds
-  defp extract_seconds(_), do: 0
 end

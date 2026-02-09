@@ -4,7 +4,7 @@ defmodule SocialScribe.Workers.CrmTokenRefresher do
   for ALL registered CRM providers.
 
   Runs periodically and refreshes tokens expiring within 10 minutes.
-  Replaces provider-specific workers (e.g., HubspotTokenRefresher).
+  Unified token refresher for all CRM providers.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3

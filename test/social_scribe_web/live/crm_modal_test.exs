@@ -75,13 +75,13 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "renders modal with 'Update HubSpot' title", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
 
       assert has_element?(view, "h2", "Update HubSpot")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
 
       # The modal should have a search/contact select UI
       assert has_element?(view, "[phx-change=contact_search]") or
@@ -89,7 +89,7 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "modal can be closed by navigating back", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
 
       # Modal should be visible
       assert has_element?(view, "h2", "Update HubSpot")
@@ -106,13 +106,13 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "renders modal with 'Update in Salesforce' title", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/salesforce")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/salesforce")
 
       assert has_element?(view, "h2", "Update Salesforce")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/salesforce")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/salesforce")
 
       assert has_element?(view, "[phx-change=contact_search]") or
                has_element?(view, "input")
