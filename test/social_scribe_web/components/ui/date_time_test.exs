@@ -91,9 +91,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => "date"}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => "date"})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"date\""
@@ -104,9 +102,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => "time"}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => "time"})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"time\""
@@ -130,9 +126,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => "short"}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => "short"})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"short\""
@@ -143,9 +137,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => "medium"}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => "medium"})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"medium\""
@@ -156,9 +148,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => "long"}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => "long"})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"long\""
@@ -169,9 +159,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       custom_id = "custom-datetime-id"
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "id" => custom_id}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "id" => custom_id})
 
       assert html =~ "id=\"#{custom_id}\""
     end
@@ -266,9 +254,7 @@ defmodule SocialScribeWeb.Components.UI.DateTimeTest do
       expected_iso = DateTime.to_iso8601(dt)
 
       {:ok, _view, html} =
-        live_isolated(conn, DateTimeTestLive,
-          session: %{"datetime" => dt, "format" => nil}
-        )
+        live_isolated(conn, DateTimeTestLive, session: %{"datetime" => dt, "format" => nil})
 
       assert html =~ "data-datetime=\"#{expected_iso}\""
       assert html =~ "data-format=\"datetime\""

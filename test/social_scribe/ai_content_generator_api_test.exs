@@ -13,7 +13,8 @@ defmodule SocialScribe.AIContentGeneratorApiTest do
 
     @impl true
     def generate_automation(automation, meeting) do
-      {:ok, "Test automation for automation: #{inspect(automation.id)}, meeting: #{inspect(meeting.id)}"}
+      {:ok,
+       "Test automation for automation: #{inspect(automation.id)}, meeting: #{inspect(meeting.id)}"}
     end
 
     @impl true
@@ -421,7 +422,10 @@ defmodule SocialScribe.AIContentGeneratorApiTest do
 
       # All should return errors as the implementation does
       assert {:error, :test_error} = AIContentGeneratorApi.generate_follow_up_email(meeting)
-      assert {:error, :test_error} = AIContentGeneratorApi.generate_automation(automation, meeting)
+
+      assert {:error, :test_error} =
+               AIContentGeneratorApi.generate_automation(automation, meeting)
+
       assert {:error, :test_error} = AIContentGeneratorApi.generate_hubspot_suggestions(meeting)
       assert {:error, :test_error} = AIContentGeneratorApi.generate_crm_suggestions(meeting)
       assert {:error, :test_error} = AIContentGeneratorApi.answer_crm_question(question, context)

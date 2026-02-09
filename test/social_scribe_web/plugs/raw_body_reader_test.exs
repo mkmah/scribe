@@ -73,6 +73,7 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
 
     test "preserves existing private data" do
       body = "test body"
+
       conn =
         build_conn_with_body(body)
         |> Map.put(:private, %{existing_key: "existing_value"})
@@ -133,6 +134,7 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
   describe "call/2" do
     test "is no-op when raw_body already exists in conn.private" do
       existing_body = "existing body"
+
       conn =
         build_conn_with_body("new body")
         |> Map.put(:private, %{raw_body: existing_body})
@@ -160,7 +162,7 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
       # We'll test the error path which is more realistic and testable
       # The {:more} case in read_body/2 just returns {:ok, body, conn} anyway
       # So the main test is in call/2 which returns 413
-      
+
       # Create a conn that has already been read (will cause error)
       body = String.duplicate("a", 100)
       conn = build_conn_with_body(body)
@@ -184,11 +186,11 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
       # So we can't easily test the actual error case without mocking
       # But we can verify the error handling code exists
       # In real adapters, this would occur when body read fails
-      
+
       # For this test, we'll verify the code structure handles errors
       # The actual error would be: {:error, reason} from Plug.Conn.read_body
       # which would trigger the error response
-      
+
       # Since we can't easily mock this, we'll test that the code path exists
       # by verifying the function handles all cases
       body = "test body"
@@ -204,6 +206,7 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
 
     test "preserves existing private data when reading body" do
       body = "test body"
+
       conn =
         build_conn_with_body(body)
         |> Map.put(:private, %{existing_key: "existing_value"})
@@ -246,6 +249,7 @@ defmodule SocialScribeWeb.Plugs.RawBodyReaderTest do
     test "does not modify conn when raw_body already exists" do
       existing_body = "existing"
       new_body = "new body"
+
       conn =
         build_conn_with_body(new_body)
         |> Map.put(:private, %{raw_body: existing_body, other_key: "other_value"})

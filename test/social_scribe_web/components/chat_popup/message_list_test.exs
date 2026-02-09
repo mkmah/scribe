@@ -110,9 +110,7 @@ defmodule SocialScribeWeb.Components.ChatPopup.MessageListTest do
 
     test "renders loading indicator when loading is true", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, MessageListTestLive,
-          session: %{"messages" => [], "loading" => true}
-        )
+        live_isolated(conn, MessageListTestLive, session: %{"messages" => [], "loading" => true})
 
       assert html =~ "Thinking..."
       assert html =~ "animate-bounce"
@@ -121,9 +119,7 @@ defmodule SocialScribeWeb.Components.ChatPopup.MessageListTest do
 
     test "does not render loading indicator when loading is false", %{conn: conn} do
       {:ok, _view, html} =
-        live_isolated(conn, MessageListTestLive,
-          session: %{"messages" => [], "loading" => false}
-        )
+        live_isolated(conn, MessageListTestLive, session: %{"messages" => [], "loading" => false})
 
       refute html =~ "Thinking..."
     end

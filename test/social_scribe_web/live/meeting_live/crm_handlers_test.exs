@@ -51,6 +51,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
   # Helper to build a socket for testing
   defp build_socket(assigns) do
     assigns = Map.merge(%{flash: %{}, __changed__: %{}}, assigns)
+
     %Phoenix.LiveView.Socket{
       assigns: assigns,
       private: %{live_temp: %{}}
@@ -298,6 +299,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
     test "merges suggestions with contact correctly", %{conn: conn} do
       provider = "hubspot"
+
       contact =
         Contact.new(%{
           id: "123",
@@ -349,7 +351,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
       socket = build_socket(%{meeting: meeting})
 
       # Test the function directly
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
     end
@@ -369,7 +375,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
     end
@@ -390,7 +400,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
 
@@ -414,7 +428,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
       assert map_size(updates) == 3
@@ -437,7 +455,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
     end
@@ -458,7 +480,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
     end
@@ -480,7 +506,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       socket = build_socket(%{meeting: meeting})
 
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, updated_socket} = result
       # Verify function executed successfully - push_patch may fail in test context,
@@ -524,10 +554,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
 
       # Should raise error when provider is invalid (Registry.adapter_for! raises)
       send(view.pid, {:crm_search, provider, query, credential})
-      
+
       # Wait for the process to crash
-      assert_receive {:DOWN, ^ref, :process, _pid, {%ArgumentError{message: "Unknown CRM provider: invalid_provider"}, _stack}}
-      
+      assert_receive {:DOWN, ^ref, :process, _pid,
+                      {%ArgumentError{message: "Unknown CRM provider: invalid_provider"}, _stack}}
+
       # Restore config for other tests
       Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)
     end
@@ -551,7 +582,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
       socket = build_socket(%{meeting: meeting})
 
       # Test that the function executes successfully
-      result = CrmHandlers.handle_info({:crm_apply_updates, provider, updates, contact, credential}, socket)
+      result =
+        CrmHandlers.handle_info(
+          {:crm_apply_updates, provider, updates, contact, credential},
+          socket
+        )
 
       assert {:noreply, _socket} = result
     end
