@@ -8,7 +8,6 @@ defmodule SocialScribeWeb.ChatPopup do
   alias SocialScribe.Crm.Chat
   alias SocialScribe.Meetings
 
-  @impl true
   def handle_info({:chat_response, conversation_id, result}, socket) do
     require Logger
     Logger.debug("ChatPopup: Received chat_response for conversation #{conversation_id}")
@@ -49,7 +48,6 @@ defmodule SocialScribeWeb.ChatPopup do
     end
   end
 
-  @impl true
   def handle_info({:chat_error, _conversation_id, _error}, socket) do
     require Logger
     Logger.error("ChatPopup: Chat error occurred")
@@ -57,7 +55,6 @@ defmodule SocialScribeWeb.ChatPopup do
     {:noreply, socket}
   end
 
-  @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
   end
@@ -755,63 +752,6 @@ defmodule SocialScribeWeb.ChatPopup do
     |> Enum.flat_map(& &1.meeting_participants)
     |> Enum.uniq_by(& &1.name)
     |> Enum.sort_by(& &1.name)
-  end
-
-  # Source icon component for displaying data sources
-  defp source_icon(assigns) do
-    # Normalize source to string (handle both atoms and strings)
-    source = if is_atom(assigns.source), do: Atom.to_string(assigns.source), else: assigns.source
-    source_lower = String.downcase(source)
-
-    ~H"""
-    <%= case source_lower do %>
-      <% "salesforce" -> %>
-        <div
-          class="w-4 h-4 rounded-full bg-[#00A1E0] flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title="Salesforce"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M17.05 2.55c-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33l-1.67 1.67c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52L6.78 10.6c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.13.57.66.96 1.24.92.28-.02.54-.14.74-.33l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.13-.57-.66-.96-1.24-.92-.28.02-.54.14-.74.33L9.06 6.09c-.26-.12-.56-.16-.85-.1-.64.15-1.05.76-.92 1.4.04.19.13.37.26.52l1.67 1.67c.26.12.56.16.85.1.64-.15 1.05-.76.92-1.4-.04-.19-.13-.37-.26-.52l1.67-1.67c-.14-.15-.22-.33-.26-.52-.13-.64.28-1.25.92-1.4.58-.04 1.11.35 1.24.92.04.19-.02.39-.13.57l-1.67 1.67c.14.15.22.33.26.52.13.64-.28 1.25-.92 1.4-.58.04-1.11-.35-1.24-.92-.04-.19.02-.39.13-.57L7.44 5.33c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57L5.22 3.98c.14-.15.22-.33.26-.52.13-.64-.28-1.25-.92-1.4-.58-.04-1.11.35-1.24.92-.04.19.02.39.13.57l1.67 1.67c-.14.15-.22.33-.26.52-.13.64.28 1.25.92 1.4.58.04 1.11-.35 1.24-.92.04-.19-.02-.39-.13-.57l-1.67-1.67z" />
-          </svg>
-        </div>
-      <% "hubspot" -> %>
-        <div
-          class="w-4 h-4 rounded-full bg-[#FF7A59] flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title="HubSpot"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M18.164 7.93V3.836a1.5 1.5 0 0 0-3 0v7.5h-1.5V2.336a1.5 1.5 0 0 0-3 0v9h-1.5v-7.5a1.5 1.5 0 0 0-3 0v9c0 3.244 2.175 5.977 5.143 6.807L10.664 22.5a1.5 1.5 0 0 0 3 0v-1.5c3.728 0 6.75-3.022 6.75-6.75V7.93h-2.25z" />
-          </svg>
-        </div>
-      <% "meeting" -> %>
-        <div
-          class="w-4 h-4 rounded-full bg-[#EA4335] flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title="Gmail"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-          </svg>
-        </div>
-      <% "gmail" -> %>
-        <div
-          class="w-4 h-4 rounded-full bg-[#EA4335] flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title="Gmail"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-          </svg>
-        </div>
-      <% _ -> %>
-        <div
-          class="w-4 h-4 rounded-full bg-gray-400 flex items-center justify-center ring-1 ring-white dark:ring-card"
-          title={source}
-        >
-          <span class="text-[6px] font-bold text-white uppercase">
-            {String.first(source || "?")}
-          </span>
-        </div>
-    <% end %>
-    """
   end
 
   # Common sources badge component with faded text and overlapping icons

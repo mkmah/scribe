@@ -18,15 +18,17 @@
     - **Database**: If prompted to set up a Postgres database, say **Yes**. This will automatically provision a Fly Postgres database and set the `DATABASE_URL` secret.
     - **Deploy**: You can choose to deploy now or later.
 
-3.  **Configure Secrets (Environment Variables)**
+3. **Configure Secrets (Environment Variables)**
     - Set the required secrets using `fly secrets set`. You can set multiple secrets at once.
     - Example command:
+
       ```bash
       fly secrets set SECRET_KEY_BASE="<generated_secret>" \
         GOOGLE_CLIENT_ID="<your_client_id>" \
         GOOGLE_CLIENT_SECRET="<your_client_secret>" \
         ... (other vars)
       ```
+
     - **Required Variables**:
 
     | Variable Name | Description | Example / Notes |
@@ -62,4 +64,3 @@
     - **Logs**: Run `fly logs` to see live logs from your application.
     - **Status**: Run `fly status` to check the status of your machines.
     - **SSH**: Run `fly ssh console` to SSH into your running container for debugging.
-

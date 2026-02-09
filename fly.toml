@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for social-scribe on 2025-05-25T23:05:32-03:00
+# fly.toml app configuration file generated for social-scribe-floral-frost-8795 on 2026-02-09T19:15:33+05:30
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'social-scribe'
-primary_region = 'gru'
+app = 'social-scribe-floral-frost-8795'
+primary_region = 'lax'
 kill_signal = 'SIGTERM'
 
 [build]
@@ -13,7 +13,7 @@ kill_signal = 'SIGTERM'
   release_command = '/app/bin/migrate'
 
 [env]
-  PHX_HOST = 'social-scribe.fly.dev'
+  PHX_HOST = 'social-scribe-floral-frost-8795.fly.dev'
   PORT = '8080'
 
 [http_service]
@@ -33,3 +33,4 @@ kill_signal = 'SIGTERM'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024

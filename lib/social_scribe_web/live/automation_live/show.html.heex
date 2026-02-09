@@ -43,7 +43,7 @@
           <div class="flex items-center gap-3">
             <.badge
               variant="secondary"
-              class={[
+              class={Enum.join([
                 "text-xs font-medium capitalize",
                 case @automation.platform do
                   "linkedin" ->
@@ -58,7 +58,7 @@
                   _ ->
                     ""
                 end
-              ]}
+              ], " ")}
             >
               {@automation.platform}
             </.badge>
