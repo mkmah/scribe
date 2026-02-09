@@ -58,7 +58,7 @@ The `auto_detect_crm_provider/1` function returns one of three values:
 
 ### Example Auto-Detection Scenarios
 
-**Scenario 1: Single Match**
+#### Scenario 1: Single Match
 
 - User has HubSpot and Salesforce connected
 - Meeting participants: "John Doe", "Jane Smith"
@@ -66,7 +66,7 @@ The `auto_detect_crm_provider/1` function returns one of three values:
 - Salesforce search finds no matches
 - Result: `crm_provider` automatically set to "hubspot"
 
-**Scenario 2: Multiple Matches**
+#### Scenario 2: Multiple Matches
 
 - User has HubSpot and Salesforce connected
 - Meeting participants: "John Doe"
@@ -74,7 +74,7 @@ The `auto_detect_crm_provider/1` function returns one of three values:
 - Salesforce search also finds "John Doe"
 - Result: `crm_provider` remains `nil`, user must select manually
 
-**Scenario 3: No Matches**
+#### Scenario 3: No Matches
 
 - User has HubSpot connected
 - Meeting participants: "Unknown Person"

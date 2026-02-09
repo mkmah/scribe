@@ -2,7 +2,7 @@
 
 ## Overview
 
-Social Scribe is a monolithic web application built with Elixir and Phoenix LiveView. It functions as an intelligent meeting assistant that automates note-taking, content generation, and social media distribution. The system integrates with Google Calendar for scheduling, Recall.ai for meeting transcription, and Google Gemini for AI content generation.
+Social Scribe is a monolithic web application built with Elixir and Phoenix LiveView. It functions as an intelligent meeting assistant that automates note-taking, content generation, and social media distribution. The system integrates with Google Calendar for scheduling, Recall.ai for meeting transcription, and a configurable LLM (Anthropic Claude default, Google Gemini optional) for AI content generation.
 
 ## Technology Stack
 
@@ -15,7 +15,7 @@ Social Scribe is a monolithic web application built with Elixir and Phoenix Live
 
 ### Key Libraries
 
-- **Ueberauth:** OAuth2 authentication strategies for Google, LinkedIn, Facebook, and HubSpot.
+- **Ueberauth:** OAuth2 authentication strategies for Google, LinkedIn, Facebook, HubSpot, and Salesforce.
 - **Tesla:** HTTP client for communicating with external REST APIs (Recall, HubSpot, Graph API).
 - **Ecto:** Database wrapper, changesets, and query generation.
 - **Tailwind CSS:** Utility-first CSS framework for styling.
@@ -32,7 +32,7 @@ The database is normalized to support multi-provider authentication, calendar sy
   - `email` (string, unique), `hashed_password` (string).
 - **`user_credentials`**: Stores OAuth tokens for connected providers.
   - `user_id` (FK -> users).
-  - `provider` (string: "google", "linkedin", "facebook", "hubspot").
+  - `provider` (string: "google", "linkedin", "facebook", "hubspot", "salesforce").
   - `uid` (string): Provider-specific user ID.
   - `token` (string), `refresh_token` (string), `expires_at` (datetime).
 
@@ -89,7 +89,7 @@ The database is normalized to support multi-provider authentication, calendar sy
 2. **Storage:** valid events (future dates, contain meeting links) are upserted into `calendar_events`.
 3. **User Action:** User toggles "Record Meeting" on an event in the UI.
 4. **Dispatch:**
-    - The system schedules a request to Recall.ai API to spawn a bot 5 minutes before `start_time`.
+    - The system schedules a request to Recall.ai API to spawn a bot a configurable number of minutes before `start_time` (see Settings for bot join timing).
     - A `RecallBot` record is created with status "scheduled".
 
 ### 3. Meeting Recording & Transcription
@@ -104,9 +104,9 @@ The database is normalized to support multi-provider authentication, calendar sy
 
 1. **Trigger:** Successful insertion of a `Meeting` triggers `AiContentGenerator` worker.
 2. **Processing:**
-    - **Email:** System sends transcript + "Summary Email" prompt to Google Gemini. Result saved to `meetings.follow_up_email`.
+    - **Email:** System sends transcript + "Summary Email" prompt to the configured LLM (Anthropic or Gemini). Result saved to `meetings.follow_up_email`.
     - **Automations:** System fetches active `automations` for the user.
-    - **Loop:** For each automation, sends transcript + user's prompt to Gemini.
+    - **Loop:** For each automation, sends transcript + user's prompt to the configured LLM.
 3. **Result:** Specific posts (e.g., "LinkedIn Post") are saved to `automation_results`.
 
 ### 5. Social Distribution

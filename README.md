@@ -2,7 +2,7 @@
 
 **Stop manually summarizing meetings and drafting social media posts! Social Scribe leverages AI to transform your meeting transcripts into engaging follow-up emails and platform-specific social media content, ready to share.**
 
-Social Scribe is a powerful Elixir and Phoenix LiveView application designed to connect to your calendars, automatically send an AI notetaker to your virtual meetings, provide accurate transcriptions via Recall.ai, and then utilize Google Gemini's advanced AI to draft compelling follow-up emails and social media posts through user-defined automation rules. This project was developed with significant AI assistance, as encouraged by the challenge, to rapidly build a feature-rich application.
+Social Scribe is a powerful Elixir and Phoenix LiveView application designed to connect to your calendars, automatically send an AI notetaker to your virtual meetings, provide accurate transcriptions via Recall.ai, and then use a configurable AI provider (Anthropic Claude by default, or Google Gemini) to draft compelling follow-up emails and social media posts through user-defined automation rules. This project was developed with significant AI assistance, as encouraged by the challenge, to rapidly build a feature-rich application.
 
 ---
 
@@ -19,7 +19,8 @@ Social Scribe is a powerful Elixir and Phoenix LiveView application designed to 
   * Recall.ai bot joins meetings a configurable number of minutes before the start time.
   * **Bot ID Management:** Adheres to challenge constraints by tracking individually created `bot_id`s.
   * **Polling for Media:** Implements a robust polling mechanism (via Oban) to check bot status and retrieve transcripts/media.
-* **AI-Powered Content Generation (Google Gemini):**
+* **AI-Powered Content Generation (Anthropic Claude or Google Gemini):**
+  * Uses a configurable LLM (Anthropic Claude default; set `LLM_PROVIDER=gemini` for Google Gemini) to draft follow-up emails and automation content.
   * Automatically drafts a follow-up email summarizing key discussion points and action items from the meeting transcript.
   * **Custom Automations:** Users can create, view, and manage automation templates, defining custom prompts, target platforms (LinkedIn, Facebook), and descriptions.
 * **CRM Integration (HubSpot & Salesforce):**
@@ -77,7 +78,7 @@ Social Scribe is a powerful Elixir and Phoenix LiveView application designed to 
 * **Authentication:** Ueberauth (Google, LinkedIn, Facebook, HubSpot, Salesforce)
 * **HTTP Clients:** Tesla (for CRM API integrations)
 * **Meeting Transcription:** Recall.ai API
-* **AI Content Generation:** Google Gemini API
+* **AI Content Generation:** Anthropic Claude (default) or Google Gemini (set `LLM_PROVIDER=gemini`)
 * **Frontend:** Tailwind CSS, Heroicons, Phoenix LiveView
 * **Progress Bar:** Topbar.js for page loading indication.
 
@@ -117,16 +118,20 @@ Follow these steps to get SocialScribe running on your local machine.
     * Install Node.js dependencies for assets (`cd assets && npm install && cd ..`)
 
 3. **Configure Environment Variables:**
-    Copy `.env.example` to `.env` and fill in your credentials:
-    * **Required:**
-        * `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: Google OAuth (create at Google Cloud Console)
-        * `RECALL_API_KEY`: Recall.ai API key (get from recall.ai)
-        * `GEMINI_API_KEY`: Google Gemini API key (get from AI Studio)
-    * **Optional (for CRM features):**
-        * `HUBSPOT_CLIENT_ID` / `HUBSPOT_CLIENT_SECRET`: HubSpot OAuth
-        * `SALESFORCE_CLIENT_ID` / `SALESFORCE_CLIENT_SECRET`: Salesforce Connected App
+    Set the environment variables listed below. For local development you can use a `.env` file or `.envrc`; see [Deployment Guide](docs/deployment.md) for production secrets.
 
-    See `.env.example` for the complete template.
+    | Variable | Required | Description |
+    |----------|----------|-------------|
+    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth (Google Cloud Console). Add `GOOGLE_REDIRECT_URI` for production. |
+    | `RECALL_API_KEY` | Yes | Recall.ai API key ([recall.ai](https://www.recall.ai/)). Optionally `RECALL_REGION`. |
+    | **Default LLM (Anthropic)** | | |
+    | `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL` | Yes (default) | When using default AI provider. |
+    | **Alternative LLM (Gemini)** | | |
+    | `GEMINI_API_KEY` | If using Gemini | Set `LLM_PROVIDER=gemini` to use Google Gemini instead of Anthropic. |
+    | `HUBSPOT_CLIENT_ID` / `HUBSPOT_CLIENT_SECRET` | Optional | HubSpot OAuth (CRM). |
+    | `SALESFORCE_CLIENT_ID` / `SALESFORCE_CLIENT_SECRET` | Optional | Salesforce Connected App (CRM). |
+    | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | Optional | LinkedIn posting. |
+    | `FACEBOOK_APP_ID` / `FACEBOOK_APP_SECRET` | Optional | Facebook posting. |
 
 4. **Start the Phoenix Server:**
 
@@ -142,6 +147,10 @@ Follow these steps to get SocialScribe running on your local machine.
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
+### Deploy to Fly.io
+
+The repo includes a GitHub Action that deploys to Fly.io on push to `master`. Configure the `FLY_API_TOKEN` secret in your GitHub repository. See the [Deployment Guide](docs/deployment.md) for manual deploy steps and how to set secrets on Fly.io.
+
 ---
 
 ## ⚙️ Functionality Deep Dive
@@ -150,8 +159,8 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 * **Record & Transcribe:** On the dashboard, users toggle "Record Meeting?" for desired events. The system extracts meeting links (Zoom, Meet) and uses Recall.ai to dispatch a bot. A background poller (`BotStatusPoller`) checks for completed recordings and transcripts, saving the data to local `Meeting`, `MeetingTranscript`, and `MeetingParticipant` tables.
 * **AI Content Generation:**
   * Once a meeting is processed, an `AIContentGenerationWorker` is enqueued.
-  * This worker uses Google Gemini to draft a follow-up email.
-  * It also processes all active "Automations" defined by the user. For each automation, it combines the meeting data with the user's `prompt_template` and calls Gemini to generate content (e.g., a LinkedIn post), saving it as an `AutomationResult`.
+  * This worker uses the configured LLM (Anthropic or Gemini) to draft a follow-up email.
+  * It also processes all active "Automations" defined by the user. For each automation, it combines the meeting data with the user's `prompt_template` and calls the configured LLM to generate content (e.g., a LinkedIn post), saving it as an `AutomationResult`.
 * **Social Posting:**
   * From the "Meeting Details" page, users can view AI-generated email drafts and posts from their automations.
   * "Copy" buttons are available.

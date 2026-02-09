@@ -3,6 +3,7 @@
 This guide explains how to add a new CRM (Customer Relationship Management) provider to Social Scribe. The application supports HubSpot and Salesforce out of the box, and the architecture is designed to make adding additional CRMs straightforward.
 
 Adding a new CRM requires four main components:
+
 1. An adapter module that implements the CRM behaviour
 2. A field mapping module for translating between canonical and provider-specific field names
 3. A Ueberauth strategy for OAuth authentication
@@ -16,7 +17,7 @@ This guide uses Pipedrive as an example, but the same pattern applies to any CRM
 
 Before diving into the implementation, here is how the CRM system is organized:
 
-```
+```text
 lib/social_scribe/crm/
   behaviour.ex              # Defines the interface all CRM adapters must implement
   registry.ex               # Maps provider strings to adapter modules
@@ -503,7 +504,7 @@ config :ueberauth, Ueberauth.Strategy.Pipedrive.OAuth,
   client_secret: System.get_env("PIPEDRIVE_CLIENT_SECRET")
 ```
 
-Update `.envrc` or `.env.example`:
+Document the variables in the [README](../README.md) (Getting Started) or [Deployment Guide](deployment.md), and in your local `.envrc` if you use one:
 
 ```bash
 # Pipedrive (optional)
@@ -552,7 +553,7 @@ Make sure the LiveView assigns `@pipedrive_credentials` by querying for credenti
 
 Create test files for your adapter:
 
-```
+```bash
 test/social_scribe/crm/adapters/pipedrive_test.exs
 test/social_scribe/crm/adapters/pipedrive_fields_test.exs
 ```
@@ -612,7 +613,7 @@ Before considering your integration complete, verify:
 - [ ] Ueberauth strategy module created
 - [ ] Provider added to Ueberauth config in `config/config.exs`
 - [ ] OAuth credentials configured in `config/runtime.exs`
-- [ ] Environment variables documented in `.envrc` or `.env.example`
+- [ ] Environment variables documented in README or Deployment Guide (and `.envrc` if used)
 - [ ] UI added to settings page for connecting the CRM
 - [ ] Tests written for adapter and field mappings
 - [ ] Token refresh works correctly
@@ -624,7 +625,7 @@ Before considering your integration complete, verify:
 
 After adding Pipedrive, your file structure should include:
 
-```
+```text
 lib/social_scribe/crm/
   adapters/
     pipedrive.ex

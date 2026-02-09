@@ -55,9 +55,9 @@ You'll need to set up the following:
    - Sign up at [https://www.recall.ai/](https://www.recall.ai/)
    - Get your API key from the dashboard
 
-3. **Google Gemini API Key** (Required for AI content generation)
-   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Create an API key
+3. **AI provider** (Required for AI content generation). Use one of:
+   - **Anthropic (default):** Set `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and `ANTHROPIC_MODEL`. No need to set `LLM_PROVIDER` (defaults to `anthropic`).
+   - **Google Gemini:** Set `GEMINI_API_KEY` and `LLM_PROVIDER=gemini`. Get an API key at [Google AI Studio](https://makersuite.google.com/app/apikey).
 
 4. **HubSpot OAuth App** (Optional - for HubSpot CRM testing)
    - Go to [HubSpot Developer Portal](https://developers.hubspot.com/)

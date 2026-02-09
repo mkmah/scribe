@@ -60,7 +60,7 @@ Before webhooks, Social Scribe used an Oban cron job (`BotStatusPoller`) that ra
 ### Comparison Table
 
 | Aspect | Polling (Old) | Webhooks (New) |
-|--------|---------------|----------------|
+| -------- | --------------- | ---------------- |
 | **Latency** | 0-120 seconds | 0-1 seconds |
 | **API Calls** | Every 2 minutes (all bots) | Only on events |
 | **Rate Limit Risk** | High (with many bots) | Low (push-based) |
@@ -74,7 +74,7 @@ Before webhooks, Social Scribe used an Oban cron job (`BotStatusPoller`) that ra
 
 ### Architecture Overview
 
-```
+```text
 ┌─────────────┐         ┌──────────────┐         ┌─────────────┐
 │  Recall.ai  │────────▶│  Webhook     │────────▶│  Social     │
 │   Bot       │  POST   │  Endpoint    │  Verify │  Scribe      │
@@ -162,16 +162,19 @@ Bots.Processor.process_completed_bot(bot_record, bot_api_info)
 Add the webhook secret to your environment configuration:
 
 **Development** (`.envrc`):
+
 ```bash
 export RECALL_WEBHOOK_SECRET="whsec_XfRdZzMFX864+UPVWpPNOEpwd6aqA0NfAPumEoOBOiuFFq36iNSpB43k7QYGKo5z"
 ```
 
 **Production** (set in your deployment platform):
+
 ```bash
 RECALL_WEBHOOK_SECRET=whsec_XfRdZzMFX864+UPVWpPNOEpwd6aqA0NfAPumEoOBOiuFFq36iNSpB43k7QYGKo5z
 ```
 
 The secret is already configured in `config/runtime.exs`:
+
 ```elixir
 config :social_scribe, :recall_webhook_secret, System.get_env("RECALL_WEBHOOK_SECRET")
 ```
@@ -181,9 +184,11 @@ config :social_scribe, :recall_webhook_secret, System.get_env("RECALL_WEBHOOK_SE
 1. Go to **Webhooks** tab in Recall.ai dashboard
 2. Click **Add Webhook Endpoint** or **Edit** existing endpoint
 3. Enter your webhook URL:
-   ```
+
+   ```text
    https://yourdomain.com/api/webhooks/recall
    ```
+
    **Important**: Must use HTTPS in production
 4. Select events to subscribe to:
    - **Required**: `bot.done` (triggers meeting processing)
@@ -196,6 +201,7 @@ config :social_scribe, :recall_webhook_secret, System.get_env("RECALL_WEBHOOK_SE
 Recall.ai provides a **"Svix Play"** button in the webhooks dashboard that generates a test endpoint URL. You can use this to verify your webhook is receiving events correctly.
 
 Alternatively, trigger a test by:
+
 1. Creating a test bot via the API
 2. Waiting for it to complete
 3. Checking your application logs for webhook receipt
@@ -204,7 +210,7 @@ Alternatively, trigger a test by:
 
 Check your application logs for successful webhook processing:
 
-```
+```text
 [info] Received webhook for bot 3be05ff8-87cd-4c40-8b54-ee2636abb4f3: event_type=bot.done, status=done
 [info] Bot 3be05ff8-87cd-4c40-8b54-ee2636abb4f3 is done. Fetching transcript and participants...
 [info] Successfully created meeting record 123 from bot 3be05ff8-87cd-4c40-8b54-ee2636abb4f3
@@ -226,17 +232,20 @@ All webhook requests are cryptographically signed using **HMAC-SHA256**. Our end
    - `Webhook-Signature`: Base64-encoded HMAC signature (format: `v1,<signature>`)
 
 2. **Secret Decoding**: The webhook secret (`whsec_...`) is decoded from base64:
+
    ```elixir
    "whsec_" <> b64 = webhook_secret
    hmac_key = Base.decode64(b64)
    ```
 
 3. **Signed Content**: Construct the signed content string:
-   ```
+
+   ```elixir
    signed_content = webhook_id + "." + timestamp + "." + raw_body
    ```
 
 4. **Signature Generation**: Compute expected signature:
+
    ```elixir
    expected_signature = 
      :crypto.mac(:hmac, :sha256, hmac_key, signed_content)
@@ -244,6 +253,7 @@ All webhook requests are cryptographically signed using **HMAC-SHA256**. Our end
    ```
 
 5. **Verification**: Compare signatures using constant-time comparison:
+
    ```elixir
    Plug.Crypto.secure_compare(expected_signature, received_signature)
    ```
@@ -289,7 +299,7 @@ Recall.ai sends webhooks in the following format:
 Recall.ai sends webhooks for the following bot status events:
 
 | Event | Description | Action Taken |
-|-------|-------------|--------------|
+| ------- | ------------- | -------------- |
 | `bot.joining_call` | Bot connecting to call | Update status |
 | `bot.in_waiting_room` | Bot in waiting room | Update status |
 | `bot.in_call_not_recording` | Bot joined, not recording | Update status |
@@ -329,6 +339,7 @@ end
 **Symptoms**: No webhook logs in application, bots completing but not processed
 
 **Solutions**:
+
 1. Verify webhook URL is correct in Recall.ai dashboard
 2. Check that webhook is enabled (not paused)
 3. Ensure your application is accessible via HTTPS (required for production)
@@ -340,6 +351,7 @@ end
 **Symptoms**: `[warning] Webhook signature verification failed: :invalid_signature`
 
 **Solutions**:
+
 1. **Check Secret Format**: Ensure secret starts with `whsec_` and is complete
 2. **Verify Environment Variable**: Confirm `RECALL_WEBHOOK_SECRET` is set correctly
 3. **Check Raw Body**: Ensure `RawBodyReader` plug is working (body must be exact raw bytes)
@@ -347,6 +359,7 @@ end
 5. **Secret Decoding**: Verify secret decodes correctly (should be base64, not base64url)
 
 **Debug Steps**:
+
 ```elixir
 # Check logs for:
 # - Webhook ID, Timestamp, Raw body length
@@ -359,6 +372,7 @@ end
 **Symptoms**: `[warning] Received webhook for unknown bot_id: ...`
 
 **Solutions**:
+
 1. Bot may have been deleted from database
 2. Bot was created outside of Social Scribe
 3. Database sync issue - check `recall_bots` table
@@ -369,6 +383,7 @@ end
 **Symptoms**: Webhook received, bot status updated, but no meeting record
 
 **Solutions**:
+
 1. Check if meeting already exists (prevents duplicates)
 2. Verify transcript fetch succeeded (check logs)
 3. Check for errors in `Bots.Processor.process_completed_bot/2`
@@ -380,10 +395,12 @@ For local development, you can:
 
 1. **Use Svix Play**: Recall.ai dashboard provides test endpoint
 2. **Tunnel with ngrok**: Expose localhost to internet
+
    ```bash
    ngrok http 4000
    # Use https://your-ngrok-url.ngrok.io/api/webhooks/recall
    ```
+
 3. **Disable Verification**: Set `RECALL_WEBHOOK_SECRET=""` (development only!)
 
 ---
@@ -408,17 +425,20 @@ The `BotStatusPoller` still runs but at reduced frequency:
 
 ### Migration Strategy
 
-**Phase 1: Deploy Webhooks (Current)**
+#### Phase 1: Deploy Webhooks (Current)
+
 - Webhooks handle real-time updates
 - Poller runs every 30 minutes as backup
 - Monitor webhook delivery for 1-2 weeks
 
-**Phase 2: Verify Reliability**
+#### Phase 2: Verify Reliability
+
 - Check webhook delivery success rate
 - Verify no missed bot completions
 - Monitor error rates
 
-**Phase 3: Remove Poller (Optional)**
+#### Phase 3: Remove Poller (Optional)
+
 - Once webhooks proven reliable, remove poller cron job
 - Or keep as emergency fallback (recommended)
 
@@ -427,6 +447,7 @@ The `BotStatusPoller` still runs but at reduced frequency:
 If you want to remove polling entirely:
 
 1. **Remove from cron config** (`config/config.exs`):
+
    ```elixir
    # Remove this line:
    # {"*/30 * * * *", SocialScribe.Workers.BotStatusPoller},

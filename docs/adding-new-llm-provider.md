@@ -4,7 +4,7 @@ This guide walks you through how to add a new Large Language Model (LLM) provide
 
 ## Overview
 
-The LLM system is built around a single behaviour defined in `lib/social_scribe/llm/provider.ex`. Any new provider you add must implement one callback function: `complete/1`. The rest of the application calls this function through the configured provider and never touches vendor-specific code directly.
+The default LLM provider is Anthropic Claude; Google Gemini is a supported alternative (set `LLM_PROVIDER=gemini`). This guide explains how to add further providers (e.g. OpenAI). The LLM system is built around a single behaviour defined in `lib/social_scribe/llm/provider.ex`. Any new provider you add must implement one callback function: `complete/1`. The rest of the application calls this function through the configured provider and never touches vendor-specific code directly.
 
 ## Step 1: Create the Provider Module
 
@@ -109,7 +109,7 @@ config :social_scribe, :openai_api_key, System.get_env("OPENAI_API_KEY")
 config :social_scribe, :openai_model, System.get_env("OPENAI_MODEL") || "gpt-4"
 ```
 
-Also update the `.envrc` or `.env.example` file to document the new environment variables:
+Document the new environment variables in the [README](../README.md) (Getting Started) or [Deployment Guide](deployment.md), and in your local `.envrc` if you use one:
 
 ```bash
 # OpenAI (optional, alternative to Anthropic/Gemini)
@@ -194,7 +194,7 @@ This means you never need to change the calling code. All AI content generation,
 
 After adding your provider, the LLM directory should look like this:
 
-```
+```text
 lib/social_scribe/llm/
   provider.ex         # Behaviour definition
   anthropic.ex        # Anthropic Claude implementation
