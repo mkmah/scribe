@@ -25,12 +25,12 @@ defmodule SocialScribeWeb.UserSessionController do
 
     if user = Accounts.get_user_by_email(email) do
       conn
-      |> put_flash(:info, info)
+      |> put_flash(:success, info)
       |> UserAuth.log_in_user(user, user_params)
     else
       # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
       conn
-      |> put_flash(:error, "Invalid email or password")
+      |> put_flash(:danger, "Invalid email or password")
       |> put_flash(:email, String.slice(email, 0, 160))
       |> redirect(to: ~p"/users/log_in")
     end
@@ -38,7 +38,7 @@ defmodule SocialScribeWeb.UserSessionController do
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "Logged out successfully.")
+    |> put_flash(:success, "Logged out successfully.")
     |> UserAuth.log_out_user()
   end
 end

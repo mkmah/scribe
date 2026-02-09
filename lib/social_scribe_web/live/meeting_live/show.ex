@@ -15,48 +15,72 @@ defmodule SocialScribeWeb.MeetingLive.Show do
   def mount(%{"id" => meeting_id}, _session, socket) do
     meeting = Meetings.get_meeting_with_details(meeting_id)
 
-    user_has_automations =
-      Automations.list_active_user_automations(socket.assigns.current_user.id)
-      |> length()
-      |> Kernel.>(0)
-
-    automation_results = Automations.list_automation_results_for_meeting(meeting_id)
-
-    if meeting.calendar_event.user_id != socket.assigns.current_user.id do
+    if is_nil(meeting) do
       socket =
         socket
-        |> put_flash(:error, "You do not have permission to view this meeting.")
+        |> put_flash(:danger, "Meeting not found.")
         |> redirect(to: ~p"/dashboard/meetings")
 
-      {:error, socket}
-    else
-      # Old HubSpot credential (for backward compatibility)
-      # hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
-
-      # Build CRM credentials map for all registered providers
-      crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
-      crm_entries = build_crm_entries(crm_credentials)
-
-      socket =
-        socket
-        |> assign(:page_title, "Meeting Details: #{meeting.title}")
-        |> assign(:meeting, meeting)
-        |> assign(:automation_results, automation_results)
-        |> assign(:user_has_automations, user_has_automations)
-        # |> assign(:hubspot_credential, hubspot_credential)
-        |> assign(:crm_credentials, crm_credentials)
-        |> assign(:crm_entries, crm_entries)
-        |> assign(:crm_modal_provider, nil)
-        |> assign(:crm_modal_provider_label, nil)
-        |> assign(:regenerating, false)
-        |> assign(
-          :follow_up_email_form,
-          to_form(%{
-            "follow_up_email" => ""
-          })
-        )
-
       {:ok, socket}
+    else
+      user_has_automations =
+        Automations.list_active_user_automations(socket.assigns.current_user.id)
+        |> length()
+        |> Kernel.>(0)
+
+      automation_results = Automations.list_automation_results_for_meeting(meeting_id)
+
+      if meeting.calendar_event.user_id != socket.assigns.current_user.id do
+        socket =
+          socket
+          |> put_flash(:danger, "You do not have permission to view this meeting.")
+          |> redirect(to: ~p"/dashboard/meetings")
+
+        {:ok, socket}
+      else
+        # Old HubSpot credential (for backward compatibility)
+        # hubspot_credential = Accounts.get_user_hubspot_credential(socket.assigns.current_user.id)
+
+        # Build CRM credentials map for all registered providers
+        crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
+        crm_entries_to_display = get_crm_entries_to_display(crm_credentials, meeting)
+
+        # Build CRM selection options with labels
+        crm_selection_options =
+          Enum.map(crm_credentials, fn {provider, _credential} ->
+            %{
+              provider: provider,
+              label: Registry.provider_label(provider),
+              button_class: crm_button_class(provider)
+            }
+          end)
+
+        socket =
+          socket
+          |> assign(:page_title, "Meeting Details: #{meeting.title}")
+          |> assign(:meeting, meeting)
+          |> assign(:automation_results, automation_results)
+          |> assign(:user_has_automations, user_has_automations)
+          # |> assign(:hubspot_credential, hubspot_credential)
+          |> assign(:crm_credentials, crm_credentials)
+          |> assign(:crm_entries, crm_entries_to_display)
+          |> assign(:crm_selection_options, crm_selection_options)
+          |> assign(:crm_modal_provider, nil)
+          |> assign(:crm_modal_provider_label, nil)
+          |> assign(
+            :show_crm_selector,
+            meeting.crm_provider == nil && map_size(crm_credentials) > 0
+          )
+          |> assign(:regenerating, false)
+          |> assign(
+            :follow_up_email_form,
+            to_form(%{
+              "follow_up_email" => ""
+            })
+          )
+
+        {:ok, socket}
+      end
     end
   end
 
@@ -117,7 +141,7 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       {:ok, _job} ->
         socket =
           socket
-          |> put_flash(:info, "Regeneration started. Please wait...")
+          |> put_flash(:success, "Regeneration started. Please wait...")
           |> assign(:regenerating, true)
 
         {:noreply, socket}
@@ -125,10 +149,63 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       {:error, reason} ->
         socket =
           socket
-          |> put_flash(:error, "Failed to start regeneration: #{inspect(reason)}")
+          |> put_flash(:danger, "Failed to start regeneration: #{inspect(reason)}")
 
         {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_event("set_crm_provider", %{"provider" => provider}, socket) do
+    meeting = socket.assigns.meeting
+
+    try do
+      case Meetings.update_meeting(meeting, %{crm_provider: provider}) do
+        {:ok, updated_meeting} ->
+          # Refresh CRM entries
+          crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
+          crm_entries_to_display = get_crm_entries_to_display(crm_credentials, updated_meeting)
+
+          crm_selection_options =
+            Enum.map(crm_credentials, fn {p, _credential} ->
+              %{
+                provider: p,
+                label: Registry.provider_label(p),
+                button_class: crm_button_class(p)
+              }
+            end)
+
+          socket =
+            socket
+            |> assign(:meeting, updated_meeting)
+            |> assign(:crm_entries, crm_entries_to_display)
+            |> assign(:crm_selection_options, crm_selection_options)
+            |> assign(:show_crm_selector, false)
+            |> put_flash(:success, "CRM provider set to #{Registry.provider_label(provider)}")
+
+          {:noreply, socket}
+
+        {:error, _changeset} ->
+          socket =
+            socket
+            |> put_flash(:danger, "Failed to set CRM provider")
+
+          {:noreply, socket}
+      end
+    rescue
+      Ecto.StaleEntryError ->
+        socket =
+          socket
+          |> put_flash(:danger, "Failed to set CRM provider: meeting may have been deleted")
+
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("show_crm_selector", _params, socket) do
+    socket = assign(socket, :show_crm_selector, true)
+    {:noreply, socket}
   end
 
   # === CRM Handlers (Delegated) ===
@@ -156,7 +233,18 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     do: CrmHandlers.handle_info(msg, socket)
 
   defp build_crm_credentials(user_id) do
+    configured_adapter = Application.get_env(:social_scribe, :crm_api)
+
+    # If a specific adapter is configured (e.g. HubSpot), only show that one.
+    # If the configured adapter is a Mock or generic (not in registry), show all.
+    known_adapters = Enum.map(Registry.crm_providers(), &Registry.adapter_for!/1)
+
     Registry.crm_providers()
+    |> Enum.filter(fn provider ->
+      is_nil(configured_adapter) ||
+        configured_adapter not in known_adapters ||
+        Registry.adapter_for!(provider) == configured_adapter
+    end)
     |> Enum.reduce(%{}, fn provider, acc ->
       case Accounts.get_user_crm_credential(user_id, provider) do
         nil -> acc
@@ -175,9 +263,41 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     end)
   end
 
-  defp crm_button_class("hubspot"), do: "bg-[#ff7a59] hover:bg-[#ff6a45] text-white"
-  defp crm_button_class("salesforce"), do: "bg-[#00a1e0] hover:bg-[#0089c2] text-white"
-  defp crm_button_class(_), do: "bg-primary text-primary-foreground hover:bg-primary/90"
+  defp get_crm_entries_to_display(crm_credentials, meeting) do
+    case meeting.crm_provider do
+      nil ->
+        # No CRM associated - show all connected CRMs for selection
+        build_crm_entries(crm_credentials)
+
+      provider ->
+        # CRM is associated - show that CRM button, plus "Change CRM" option if multiple CRMs connected
+        associated_entry = [
+          %{
+            provider: provider,
+            label: Registry.provider_label(provider),
+            button_class: crm_button_class(provider)
+          }
+        ]
+
+        if map_size(crm_credentials) > 1 do
+          # Add "Change CRM" option
+          associated_entry ++
+            [
+              %{
+                provider: :change_crm,
+                label: "Change CRM",
+                button_class: "bg-muted text-muted-foreground hover:bg-muted/80"
+              }
+            ]
+        else
+          associated_entry
+        end
+    end
+  end
+
+  def crm_button_class("hubspot"), do: "bg-[#ff7a59] hover:bg-[#ff6a45] text-white"
+  def crm_button_class("salesforce"), do: "bg-[#00a1e0] hover:bg-[#0089c2] text-white"
+  def crm_button_class(_), do: "bg-primary text-primary-foreground hover:bg-primary/90"
 
   # Returns true if all automation results have failed status
   defp has_only_failed_results(automation_results) do

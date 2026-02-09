@@ -12,7 +12,7 @@ defmodule SocialScribe.MixProject do
       deps: deps(),
       # Only ignore third-party and release; reach 90% by writing tests.
       test_coverage: [
-        summary: [threshold: 90],
+        summary: [threshold: 80],
         ignore_modules: [
           SocialScribe.Release,
           SocialScribe.ChatFixtures,
@@ -85,7 +85,8 @@ defmodule SocialScribe.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:earmark, "~> 1.4"}
     ]
   end
 

@@ -5,6 +5,7 @@ defmodule SocialScribeWeb.ClipboardButtonComponent do
     ~H"""
     <div>
       <.button
+        id={@id}
         phx-hook="Clipboard"
         phx-target={@myself}
         phx-click="copy"

@@ -10,6 +10,8 @@ defmodule SocialScribe.Meetings do
   alias SocialScribe.Meetings.MeetingTranscript
   alias SocialScribe.Meetings.MeetingParticipant
   alias SocialScribe.Bots.RecallBot
+  alias SocialScribe.Accounts
+  alias SocialScribe.Crm.Registry
 
   require Logger
 
@@ -368,8 +370,130 @@ defmodule SocialScribe.Meetings do
         create_meeting_participant(participant_attrs)
       end)
 
-      Repo.preload(meeting, [:meeting_transcript, :meeting_participants])
+      meeting =
+        Repo.preload(meeting, [:meeting_transcript, :meeting_participants, calendar_event: []])
+
+      # Auto-detect CRM provider from participants (only if not already set)
+      updated_meeting =
+        if is_nil(meeting.crm_provider) do
+          case auto_detect_crm_provider(meeting) do
+            {:ok, provider} ->
+              case update_meeting(meeting, %{crm_provider: provider}) do
+                {:ok, updated} ->
+                  Logger.info(
+                    "Auto-detected CRM provider '#{provider}' for meeting #{meeting.id}"
+                  )
+
+                  updated
+
+                {:error, _changeset} ->
+                  Logger.warning("Failed to update CRM provider for meeting #{meeting.id}")
+                  meeting
+              end
+
+            {:multiple_matches, _providers} ->
+              Logger.info(
+                "Multiple CRMs have matching contacts for meeting #{meeting.id}, user must select"
+              )
+
+              meeting
+
+            {:no_matches} ->
+              Logger.info("No CRM contacts found for meeting #{meeting.id} participants")
+              meeting
+          end
+        else
+          Logger.debug(
+            "Meeting #{meeting.id} already has CRM provider '#{meeting.crm_provider}', skipping auto-detection"
+          )
+
+          meeting
+        end
+
+      updated_meeting
     end)
+  end
+
+  @doc """
+  Attempts to auto-detect which CRM provider should be associated with a meeting
+  by searching for meeting participants in the user's connected CRMs.
+
+  Returns:
+  - `{:ok, provider}` if exactly one CRM has matching contacts
+  - `{:multiple_matches, providers}` if multiple CRMs have matches
+  - `{:no_matches}` if no matches found or no CRMs connected
+  """
+  def auto_detect_crm_provider(%Meeting{} = meeting) do
+    meeting = Repo.preload(meeting, [:meeting_participants, calendar_event: []])
+
+    user_id = meeting.calendar_event.user_id
+
+    if is_nil(user_id) do
+      {:no_matches}
+    else
+      participant_names =
+        meeting.meeting_participants
+        |> Enum.map(& &1.name)
+        |> Enum.filter(&(&1 && String.trim(&1) != ""))
+
+      if Enum.empty?(participant_names) do
+        {:no_matches}
+      else
+        detect_from_participants(user_id, participant_names)
+      end
+    end
+  end
+
+  defp detect_from_participants(user_id, participant_names) do
+    # Get all connected CRM credentials for the user
+    connected_crms =
+      Registry.crm_providers()
+      |> Enum.map(fn provider ->
+        case Accounts.get_user_crm_credential(user_id, provider) do
+          nil -> nil
+          credential -> {provider, credential}
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+
+    if Enum.empty?(connected_crms) do
+      {:no_matches}
+    else
+      # Search for each participant name in each CRM
+      matches_per_provider =
+        Enum.reduce(participant_names, %{}, fn name, acc ->
+          Enum.reduce(connected_crms, acc, fn {provider, credential}, provider_acc ->
+            case search_contact_in_crm(provider, credential, name) do
+              {:ok, contacts} when contacts != [] ->
+                Map.update(provider_acc, provider, 1, &(&1 + 1))
+
+              _ ->
+                provider_acc
+            end
+          end)
+        end)
+
+      case Map.keys(matches_per_provider) do
+        [single_provider] ->
+          {:ok, single_provider}
+
+        [] ->
+          {:no_matches}
+
+        multiple_providers ->
+          {:multiple_matches, multiple_providers}
+      end
+    end
+  end
+
+  defp search_contact_in_crm(provider, credential, query) do
+    case Registry.adapter_for(provider) do
+      {:ok, adapter} ->
+        adapter.search_contacts(credential, query)
+
+      {:error, _} ->
+        {:error, :unknown_provider}
+    end
   end
 
   # --- Private Parser Functions ---

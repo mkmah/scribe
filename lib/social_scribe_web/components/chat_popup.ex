@@ -6,6 +6,7 @@ defmodule SocialScribeWeb.ChatPopup do
   use SocialScribeWeb, :live_component
 
   alias SocialScribe.Crm.Chat
+  alias SocialScribe.Meetings
 
   @impl true
   def update(assigns, socket) do
@@ -18,6 +19,11 @@ defmodule SocialScribeWeb.ChatPopup do
       |> assign_new(:current_conversation, fn -> nil end)
       |> assign_new(:messages, fn -> [] end)
       |> assign_new(:loading, fn -> false end)
+      |> assign_new(:participants, fn -> [] end)
+      |> assign_new(:show_context_menu, fn -> false end)
+      |> assign_new(:show_mention_menu, fn -> false end)
+      |> assign_new(:mention_filter, fn -> "" end)
+      |> assign_new(:mentions, fn -> [] end)
 
     {:ok, socket}
   end
@@ -30,7 +36,8 @@ defmodule SocialScribeWeb.ChatPopup do
       if open do
         user = socket.assigns.current_user
         conversations = Chat.list_conversations(user.id)
-        assign(socket, open: true, conversations: conversations)
+        participants = load_user_participants(user)
+        assign(socket, open: true, conversations: conversations, participants: participants)
       else
         assign(socket, open: false)
       end
@@ -131,6 +138,47 @@ defmodule SocialScribeWeb.ChatPopup do
   end
 
   @impl true
+  def handle_event("toggle_context_menu", _params, socket) do
+    {:noreply, assign(socket, :show_context_menu, !socket.assigns.show_context_menu)}
+  end
+
+  @impl true
+  def handle_event("close_context_menu", _params, socket) do
+    {:noreply, assign(socket, :show_context_menu, false)}
+  end
+
+  @impl true
+  def handle_event("add_participant_context", %{"name" => name}, socket) do
+    # Insert the @mention into the textarea via JS event
+    socket =
+      socket
+      |> assign(:show_context_menu, false)
+      |> push_event("insert_mention", %{name: name})
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("show_mention_menu", %{"filter" => filter}, socket) do
+    {:noreply, assign(socket, show_mention_menu: true, mention_filter: filter)}
+  end
+
+  @impl true
+  def handle_event("hide_mention_menu", _params, socket) do
+    {:noreply, assign(socket, show_mention_menu: false, mention_filter: "")}
+  end
+
+  @impl true
+  def handle_event("select_mention", %{"name" => name}, socket) do
+    socket =
+      socket
+      |> assign(show_mention_menu: false, mention_filter: "")
+      |> push_event("insert_mention", %{name: name})
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div id="chat-popup-wrapper">
@@ -226,17 +274,16 @@ defmodule SocialScribeWeb.ChatPopup do
           </div>
 
           <%!-- Tabs --%>
-          <div class="flex gap-4 border-b border-border">
+          <div class="flex gap-1 border-b border-border">
             <button
               phx-click="switch_tab"
               phx-value-tab="chat"
               phx-target={@myself}
               class={[
-                "text-sm font-medium pb-2.5 border-b-2 transition-colors -mb-px cursor-pointer",
+                "text-sm font-medium px-3 py-2 rounded-t-lg transition-colors cursor-pointer",
                 if(@active_tab == :chat,
-                  do: "text-foreground border-gray-900 dark:border-gray-100",
-                  else:
-                    "text-muted-foreground border-transparent hover:text-gray-600 dark:hover:text-gray-300"
+                  do: "text-foreground bg-muted/80 border border-border border-b-0 -mb-px",
+                  else: "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )
               ]}
             >
@@ -247,11 +294,10 @@ defmodule SocialScribeWeb.ChatPopup do
               phx-value-tab="history"
               phx-target={@myself}
               class={[
-                "text-sm font-medium pb-2.5 border-b-2 transition-colors -mb-px cursor-pointer",
+                "text-sm font-medium px-3 py-2 rounded-t-lg transition-colors cursor-pointer",
                 if(@active_tab == :history,
-                  do: "text-foreground border-gray-900 dark:border-gray-100",
-                  else:
-                    "text-muted-foreground border-transparent hover:text-gray-600 dark:hover:text-gray-300"
+                  do: "text-foreground bg-muted/80 border border-border border-b-0 -mb-px",
+                  else: "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )
               ]}
             >
@@ -260,14 +306,24 @@ defmodule SocialScribeWeb.ChatPopup do
           </div>
         </div>
 
-        <%!-- Content --%>
+        <%!-- Content: both panels kept in DOM so Chat input draft is preserved when switching tabs --%>
         <div class="flex flex-col flex-1 overflow-hidden">
-          <%= if @active_tab == :chat do %>
+          <div class={[
+            "flex flex-col flex-1 overflow-hidden",
+            @active_tab != :chat && "hidden"
+          ]}>
             <div
               id="chat-popup-messages"
               phx-hook="ScrollToBottom"
               class="flex-1 px-5 py-4 space-y-4 overflow-y-auto scrollbar-thin"
             >
+              <%!-- Timestamp at top --%>
+              <%= if @current_conversation do %>
+                <div class="text-center text-xs text-muted-foreground pb-2 border-b border-border mb-2">
+                  <.date_time datetime={@current_conversation.inserted_at} format="datetime" />
+                </div>
+              <% end %>
+
               <%= if Enum.empty?(@messages) do %>
                 <div class="pt-4">
                   <p class="text-sm leading-relaxed text-muted-foreground">
@@ -278,9 +334,9 @@ defmodule SocialScribeWeb.ChatPopup do
                 <%= for message <- @messages do %>
                   <%= if message.role == "user" do %>
                     <div class="flex justify-end">
-                      <div class="max-w-[85%] bg-muted rounded-2xl rounded-br-md px-4 py-2.5">
+                      <div class="max-w-[85%] bg-muted rounded-2xl rounded-br-md px-4 py-2.5 border border-border/60 shadow-sm">
                         <p class="text-sm leading-relaxed text-foreground">
-                          {format_message_content(message.content)}
+                          <.message_content_block content={message.content} />
                         </p>
                       </div>
                     </div>
@@ -288,8 +344,19 @@ defmodule SocialScribeWeb.ChatPopup do
                     <div class="flex justify-start">
                       <div class="max-w-[85%]">
                         <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                          {format_message_content(message.content)}
+                          <.message_content_block content={message.content} />
                         </p>
+                        <%!-- Sources below assistant replies --%>
+                        <%= if message.metadata && message.metadata["sources"] && Enum.any?(message.metadata["sources"]) do %>
+                          <div class="flex items-center gap-1.5 mt-2">
+                            <span class="text-xs text-muted-foreground">Sources</span>
+                            <div class="flex -space-x-1">
+                              <%= for source <- message.metadata["sources"] do %>
+                                <.source_icon source={source} />
+                              <% end %>
+                            </div>
+                          </div>
+                        <% end %>
                       </div>
                     </div>
                   <% end %>
@@ -312,28 +379,84 @@ defmodule SocialScribeWeb.ChatPopup do
             </div>
 
             <%!-- Input Area --%>
-            <div class="flex-shrink-0 px-4 pt-2 pb-4">
-              <form id="chat-popup-form" phx-submit="send_message" phx-target={@myself}>
-                <div class="border border-border rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-                  <%!-- Add Context button at top --%>
+            <div class="flex-shrink-0 px-4 pt-2 pb-4 relative">
+              <%!-- Context menu dropdown (from button click) - opens above so it's never cut off --%>
+              <%= if @show_context_menu do %>
+                <div
+                  phx-click-away="close_context_menu"
+                  phx-target={@myself}
+                  class="absolute left-7 bottom-full mb-0.5 w-56 bg-card border border-border rounded-lg shadow-lg z-[100]"
+                >
+                  <div class="p-2 text-xs font-medium text-muted-foreground border-b border-border">
+                    Meeting Participants
+                  </div>
+                  <div class="max-h-48 overflow-y-auto">
+                    <%= if Enum.empty?(@participants) do %>
+                      <div class="px-3 py-2 text-sm text-muted-foreground">
+                        No participants found
+                      </div>
+                    <% else %>
+                      <%= for participant <- @participants do %>
+                        <button
+                          type="button"
+                          phx-click="add_participant_context"
+                          phx-value-name={participant.name}
+                          phx-target={@myself}
+                          class="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 cursor-pointer"
+                        >
+                          <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                            {String.first(participant.name)}
+                          </span>
+                          <span class="truncate">{participant.name}</span>
+                        </button>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+
+              <%!-- Mention autocomplete dropdown (from @ typing) - Client-side rendered --%>
+
+              <form
+                id="chat-popup-form"
+                phx-submit="send_message"
+                phx-target={@myself}
+                data-participants={
+                  Jason.encode!(Enum.map(@participants || [], fn p -> %{name: p.name} end))
+                }
+              >
+                <div class="border-2 border-primary/40 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all bg-background">
+                  <%!-- Add Context button (pill above input) --%>
                   <div class="px-3 pt-2.5">
                     <button
                       type="button"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-secondary-foreground bg-gray-50 dark:bg-[#232323] hover:bg-accent border border-border rounded transition-colors cursor-pointer"
+                      phx-click="toggle_context_menu"
+                      phx-target={@myself}
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/80 hover:bg-muted border border-border rounded-full transition-colors cursor-pointer"
                     >
                       @ Add context
                     </button>
                   </div>
                   <%!-- Textarea --%>
-                  <textarea
-                    name="message"
-                    rows="3"
+                  <div
+                    id="chat-popup-textarea"
+                    contenteditable="true"
+                    role="textbox"
+                    aria-multiline="true"
                     placeholder="Ask anything about your meetings"
-                    autocomplete="off"
-                    disabled={@loading}
-                    class="w-full px-4 py-2 text-sm text-gray-900 placeholder-gray-400 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder-gray-500 focus:ring-0"
+                    data-placeholder="Ask anything about your meetings"
+                    phx-hook="MentionInput"
+                    phx-target={@myself}
+                    class="mention-input min-h-[72px] max-h-32 overflow-y-auto w-full px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-500 focus:ring-0 scrollbar-thin"
+                    data-mentions={Enum.map_join(@mentions || [], ",", & &1.name)}
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.closest('form').requestSubmit()}"
-                  ></textarea>
+                  ></div>
+                  <input
+                    type="hidden"
+                    name="message"
+                    id="chat-popup-message-input"
+                    phx-hook="MentionSync"
+                  />
                   <%!-- Sources + Send at bottom --%>
                   <div class="flex items-center justify-between px-3 pb-2.5">
                     <div class="flex items-center gap-2">
@@ -383,11 +506,12 @@ defmodule SocialScribeWeb.ChatPopup do
                     <button
                       type="submit"
                       disabled={@loading}
-                      class="flex items-center justify-center text-white transition-all rounded-full cursor-pointer w-7 h-7 bg-brand-500 dark:bg-brand-500 hover:bg-brand-600 dark:hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center transition-all rounded-lg cursor-pointer w-8 h-8 bg-muted hover:bg-muted/80 text-foreground border border-border disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Send"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="h-3.5 w-3.5"
+                        class="h-4 w-4"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -404,56 +528,136 @@ defmodule SocialScribeWeb.ChatPopup do
                 </div>
               </form>
             </div>
-          <% else %>
-            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-1.5 scrollbar-thin">
-              <%= if Enum.empty?(@conversations) do %>
-                <div class="py-12 text-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-10 h-10 mx-auto mb-3 text-gray-200 dark:text-gray-700"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
-                    />
-                  </svg>
-                  <p class="text-sm font-medium text-muted-foreground">No conversations yet</p>
-                  <p class="mt-1 text-xs text-muted-foreground">Start a new chat to get started</p>
-                </div>
-              <% else %>
-                <button
-                  :for={conv <- @conversations}
-                  phx-click="load_conversation"
-                  phx-value-id={conv.id}
-                  phx-target={@myself}
-                  class="w-full text-left px-3.5 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group cursor-pointer"
+          </div>
+          <div class={[
+            "flex-1 overflow-y-auto px-5 py-4 space-y-1.5 scrollbar-thin",
+            @active_tab != :history && "hidden"
+          ]}>
+            <%= if Enum.empty?(@conversations) do %>
+              <div class="py-12 text-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-10 h-10 mx-auto mb-3 text-gray-200 dark:text-gray-700"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1"
                 >
-                  <p class="text-sm font-medium text-gray-800 truncate dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">
-                    {conv.title}
-                  </p>
-                  <p class="text-xs text-muted-foreground mt-0.5">
-                    {Calendar.strftime(conv.inserted_at, "%b %d, %Y at %I:%M %p")}
-                  </p>
-                </button>
-              <% end %>
-            </div>
-          <% end %>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"
+                  />
+                </svg>
+                <p class="text-sm font-medium text-muted-foreground">No conversations yet</p>
+                <p class="mt-1 text-xs text-muted-foreground">Start a new chat to get started</p>
+              </div>
+            <% else %>
+              <button
+                :for={conv <- @conversations}
+                phx-click="load_conversation"
+                phx-value-id={conv.id}
+                phx-target={@myself}
+                class="w-full text-left px-3.5 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors group cursor-pointer"
+              >
+                <p class="text-sm font-medium text-gray-800 truncate dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-gray-100">
+                  {conv.title}
+                </p>
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  <.date_time datetime={conv.inserted_at} format="datetime" />
+                </p>
+              </button>
+            <% end %>
+          </div>
         </div>
       </div>
     </div>
     """
   end
 
-  defp format_message_content(content) do
-    content
-    |> String.replace(~r/@([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)/, fn match ->
-      "<span class=\"text-primary font-medium\">#{match}</span>"
+  # Split message content into text and @mention segments for pill rendering
+  defp message_content_segments(content) when is_binary(content) do
+    Regex.split(~r/(@[A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)*)/, content,
+      include_captures: true
+    )
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.map(fn
+      <<"@", _::binary>> = segment -> {:mention, String.trim_leading(segment, "@")}
+      segment -> {:text, segment}
     end)
-    |> Phoenix.HTML.raw()
+  end
+
+  defp message_content_segments(_), do: [{:text, ""}]
+
+  defp message_content_block(assigns) do
+    assigns = assign(assigns, :segments, message_content_segments(assigns.content))
+
+    ~H"""
+    <%= for segment <- @segments do %>
+      <%= case segment do %>
+        <% {:text, text} -> %>
+          {text}
+        <% {:mention, name} -> %>
+          <span class="mention-pill-inline">
+            <span class="mention-pill-inline-avatar">{String.first(name)}</span>
+            <span class="mention-pill-inline-name">{name}</span>
+          </span>
+      <% end %>
+    <% end %>
+    """
+  end
+
+  # Load deduplicated participants from all user meetings
+  # Note: We can't exclude the current user since User has email but MeetingParticipant only has name
+  defp load_user_participants(user) do
+    user
+    |> Meetings.list_user_meetings()
+    |> Enum.flat_map(& &1.meeting_participants)
+    |> Enum.uniq_by(& &1.name)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  # Source icon component for displaying data sources
+  defp source_icon(assigns) do
+    ~H"""
+    <%= case @source do %>
+      <% "salesforce" -> %>
+        <div
+          class="w-4 h-4 rounded-full bg-[#00A1E0] flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title="Salesforce"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+          </svg>
+        </div>
+      <% "hubspot" -> %>
+        <div
+          class="w-4 h-4 rounded-full bg-[#FF7A59] flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title="HubSpot"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <circle cx="12" cy="12" r="6" />
+          </svg>
+        </div>
+      <% "meeting" -> %>
+        <div
+          class="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title="Meeting"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="white">
+            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+          </svg>
+        </div>
+      <% _ -> %>
+        <div
+          class="w-4 h-4 rounded-full bg-gray-400 flex items-center justify-center ring-1 ring-white dark:ring-card"
+          title={@source}
+        >
+          <span class="text-[6px] font-bold text-white uppercase">
+            {String.first(@source || "?")}
+          </span>
+        </div>
+    <% end %>
+    """
   end
 end

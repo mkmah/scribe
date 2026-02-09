@@ -82,7 +82,7 @@
   <div class="flex-1 overflow-auto">
     <main class="p-6 max-w-5xl mx-auto">
       <%!-- Flash toasts (close button + auto-dismiss) --%>
-      <.flash_toast flash={@flash} duration={5000} />
+      <.flash_toast flash={@flash} duration={5000} flash_timestamp={assigns[:flash_timestamp]} />
 
       {@inner_content}
     </main>

@@ -151,6 +151,12 @@ defmodule SocialScribe.Crm.ChatTest do
   end
 
   describe "ask/3" do
+    setup do
+      # Ensure CRM API mock is configured
+      Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)
+      :ok
+    end
+
     test "parses mentions, fetches contact, calls AI, persists messages" do
       user = user_fixture()
       _cred = hubspot_credential_fixture(%{user_id: user.id})

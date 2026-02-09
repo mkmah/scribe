@@ -41,44 +41,6 @@
 
         <.separator />
 
-        <%!-- Timezone --%>
-        <div id="timezone-settings" phx-hook="TimezoneDetect">
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="space-y-1">
-                <h3 class="text-sm font-medium">Timezone</h3>
-                <p class="text-xs text-muted-foreground">
-                  Used for displaying meeting times and scheduling
-                </p>
-              </div>
-              <.switch
-                name="tz_browser_toggle"
-                id="tz-browser-toggle"
-                checked={@timezone_mode == "browser"}
-                phx-click="toggle_timezone_mode"
-              >
-                <:label>Use browser timezone</:label>
-              </.switch>
-            </div>
-            <div class={[
-              "transition-all duration-200",
-              if(@timezone_mode == "browser", do: "opacity-40 pointer-events-none", else: "")
-            ]}>
-              <.form_field label="Select timezone">
-                <.select
-                  id="tz-select"
-                  phx-change="update_timezone"
-                  name="timezone"
-                  options={timezone_options()}
-                  value={@selected_timezone}
-                />
-              </.form_field>
-            </div>
-          </div>
-        </div>
-
-        <.separator />
-
         <%!-- Save Button --%>
         <div class="flex justify-end">
           <.button type="submit" phx-disable-with="Saving...">

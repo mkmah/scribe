@@ -49,6 +49,24 @@ defmodule SocialScribe.Bots do
   def get_recall_bot!(id), do: Repo.get!(RecallBot, id)
 
   @doc """
+  Gets a recall_bot by its Recall.ai bot ID (the string ID from Recall.ai API).
+
+  Returns `nil` if not found.
+
+  ## Examples
+
+      iex> get_recall_bot_by_recall_id("recall_bot_123")
+      %RecallBot{}
+
+      iex> get_recall_bot_by_recall_id("unknown")
+      nil
+
+  """
+  def get_recall_bot_by_recall_id(recall_bot_id) when is_binary(recall_bot_id) do
+    Repo.get_by(RecallBot, recall_bot_id: recall_bot_id)
+  end
+
+  @doc """
   Creates a recall_bot.
 
   ## Examples

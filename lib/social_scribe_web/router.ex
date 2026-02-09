@@ -22,10 +22,13 @@ defmodule SocialScribeWeb.Router do
     pipe_through :browser
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SocialScribeWeb do
-  #   pipe_through :api
-  # end
+  # Webhook endpoints (no CSRF protection needed)
+  # Raw body is automatically stored by Plug.Parsers body_reader for signature verification
+  scope "/api/webhooks", SocialScribeWeb do
+    pipe_through :api
+
+    post "/recall", RecallWebhookController, :handle
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:social_scribe, :dev_routes) do

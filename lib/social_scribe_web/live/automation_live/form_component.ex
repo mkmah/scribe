@@ -84,7 +84,7 @@ defmodule SocialScribeWeb.AutomationLive.FormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Automation updated successfully")
+         |> put_flash(:success, "Automation updated successfully")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -101,7 +101,7 @@ defmodule SocialScribeWeb.AutomationLive.FormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Automation created successfully")
+         |> put_flash(:success, "Automation created successfully")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->

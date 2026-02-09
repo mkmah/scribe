@@ -29,12 +29,12 @@ defmodule SocialScribeWeb.AuthController do
     case Accounts.find_or_create_user_credential(user, auth) do
       {:ok, _credential} ->
         conn
-        |> put_flash(:info, "Google account added successfully.")
+        |> put_flash(:success, "Google account added successfully.")
         |> redirect(to: ~p"/dashboard/settings")
 
       {:error, _reason} ->
         conn
-        |> put_flash(:error, "Could not add Google account.")
+        |> put_flash(:danger, "Could not add Google account.")
         |> redirect(to: ~p"/dashboard/settings")
     end
   end
@@ -51,14 +51,14 @@ defmodule SocialScribeWeb.AuthController do
         Logger.info(credential)
 
         conn
-        |> put_flash(:info, "LinkedIn account added successfully.")
+        |> put_flash(:success, "LinkedIn account added successfully.")
         |> redirect(to: ~p"/dashboard/settings")
 
       {:error, reason} ->
         Logger.error(reason)
 
         conn
-        |> put_flash(:error, "Could not add LinkedIn account.")
+        |> put_flash(:danger, "Could not add LinkedIn account.")
         |> redirect(to: ~p"/dashboard/settings")
     end
   end
@@ -85,14 +85,14 @@ defmodule SocialScribeWeb.AuthController do
 
         conn
         |> put_flash(
-          :info,
+          :success,
           "Facebook account added successfully. Please select a page to connect."
         )
         |> redirect(to: ~p"/dashboard/settings/facebook_pages")
 
       {:error, _reason} ->
         conn
-        |> put_flash(:error, "Could not add Facebook account.")
+        |> put_flash(:danger, "Could not add Facebook account.")
         |> redirect(to: ~p"/dashboard/settings")
     end
   end
@@ -123,14 +123,14 @@ defmodule SocialScribeWeb.AuthController do
         Logger.info("HubSpot account connected for user #{user.id}, hub_id: #{hub_id}")
 
         conn
-        |> put_flash(:info, "HubSpot account connected successfully!")
+        |> put_flash(:success, "HubSpot account connected successfully!")
         |> redirect(to: ~p"/dashboard/settings")
 
       {:error, reason} ->
         Logger.error("Failed to save HubSpot credential: #{inspect(reason)}")
 
         conn
-        |> put_flash(:error, "Could not connect HubSpot account.")
+        |> put_flash(:danger, "Could not connect HubSpot account.")
         |> redirect(to: ~p"/dashboard/settings")
     end
   end
@@ -163,14 +163,14 @@ defmodule SocialScribeWeb.AuthController do
         Logger.info("Salesforce account connected for user #{user.id}, org: #{org_id}")
 
         conn
-        |> put_flash(:info, "Salesforce account connected successfully!")
+        |> put_flash(:success, "Salesforce account connected successfully!")
         |> redirect(to: ~p"/dashboard/settings")
 
       {:error, reason} ->
         Logger.error("Failed to save Salesforce credential: #{inspect(reason)}")
 
         conn
-        |> put_flash(:error, "Could not connect Salesforce account.")
+        |> put_flash(:danger, "Could not connect Salesforce account.")
         |> redirect(to: ~p"/dashboard/settings")
     end
   end
@@ -179,7 +179,7 @@ defmodule SocialScribeWeb.AuthController do
         "provider" => "salesforce"
       }) do
     conn
-    |> put_flash(:error, "Could not connect Salesforce account. Please try again.")
+    |> put_flash(:danger, "Could not connect Salesforce account. Please try again.")
     |> redirect(to: ~p"/dashboard/settings")
   end
 
@@ -197,7 +197,7 @@ defmodule SocialScribeWeb.AuthController do
         Logger.info(reason)
 
         conn
-        |> put_flash(:error, "There was an error signing you in.")
+        |> put_flash(:danger, "There was an error signing you in.")
         |> redirect(to: ~p"/")
     end
   end
@@ -207,7 +207,7 @@ defmodule SocialScribeWeb.AuthController do
     Logger.error(conn)
 
     conn
-    |> put_flash(:error, "There was an error signing you in. Please try again.")
+    |> put_flash(:danger, "There was an error signing you in. Please try again.")
     |> redirect(to: ~p"/")
   end
 end

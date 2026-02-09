@@ -35,9 +35,9 @@
         <h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
           Example
         </h3>
-        <p class="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-          {@automation.example}
-        </p>
+        <div class="text-sm text-foreground leading-relaxed markdown-content">
+          {raw(render_markdown(@automation.example))}
+        </div>
       </div>
 
       <div class="flex items-center justify-between pt-4 border-t">

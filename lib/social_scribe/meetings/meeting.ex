@@ -11,6 +11,8 @@ defmodule SocialScribe.Meetings.Meeting do
     field :recorded_at, :utc_datetime
     field :duration_seconds, :integer
     field :follow_up_email, :string
+    field :crm_provider, :string
+    field :crm_contact_id, :string
 
     belongs_to :calendar_event, CalendarEvent
     belongs_to :recall_bot, RecallBot
@@ -29,7 +31,9 @@ defmodule SocialScribe.Meetings.Meeting do
       :duration_seconds,
       :calendar_event_id,
       :recall_bot_id,
-      :follow_up_email
+      :follow_up_email,
+      :crm_provider,
+      :crm_contact_id
     ])
     |> validate_required([:title, :recorded_at, :calendar_event_id, :recall_bot_id])
   end

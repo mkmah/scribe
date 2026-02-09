@@ -33,7 +33,9 @@
                   <h3 class="font-semibold truncate text-foreground">{meeting.title}</h3>
                   <.platform_logo recall_bot={meeting.recall_bot} class="flex-shrink-0 w-4 h-4" />
                 </div>
-                <p class="text-sm text-muted-foreground">{meeting.recorded_at}</p>
+                <p class="text-sm text-muted-foreground">
+                  <.date_time datetime={meeting.recorded_at} format="datetime" />
+                </p>
                 <div class="flex items-center gap-4 text-sm text-muted-foreground">
                   <span class="flex items-center gap-1">
                     <.icon name="hero-clock" class="w-4 h-4" />

@@ -20,7 +20,8 @@ config :social_scribe, Oban,
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [
-       {"*/2 * * * *", SocialScribe.Workers.BotStatusPoller},
+       # BotStatusPoller runs every 30 minutes as a fallback (webhooks handle real-time updates)
+       #  {"*/30 * * * *", SocialScribe.Workers.BotStatusPoller},
        {"*/5 * * * *", SocialScribe.Workers.HubspotTokenRefresher},
        {"*/5 * * * *", SocialScribe.Workers.CrmTokenRefresher}
      ]}

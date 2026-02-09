@@ -12,9 +12,16 @@ defmodule SocialScribeWeb.HubspotModalMoxTest do
 
   describe "HubSpot Modal with mocked API" do
     setup %{conn: conn} do
+      # Configure CRM API to use the mock
+      Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)
+
       user = user_fixture()
       hubspot_credential = hubspot_credential_fixture(%{user_id: user.id})
       meeting = meeting_fixture_with_transcript(user)
+
+      on_exit(fn ->
+        Application.delete_env(:social_scribe, :crm_api)
+      end)
 
       %{
         conn: log_in_user(conn, user),
@@ -26,8 +33,20 @@ defmodule SocialScribeWeb.HubspotModalMoxTest do
 
     test "search_contacts returns mocked results", %{conn: conn, meeting: meeting} do
       mock_contacts = [
-        %{id: "123", display_name: "John Doe", email: "john@example.com"},
-        %{id: "456", display_name: "Jane Smith", email: "jane@example.com"}
+        Contact.new(%{
+          id: "123",
+          first_name: "John",
+          last_name: "Doe",
+          email: "john@example.com",
+          provider: "hubspot"
+        }),
+        Contact.new(%{
+          id: "456",
+          first_name: "Jane",
+          last_name: "Smith",
+          email: "jane@example.com",
+          provider: "hubspot"
+        })
       ]
 
       SocialScribe.CrmApiMock
@@ -71,7 +90,13 @@ defmodule SocialScribeWeb.HubspotModalMoxTest do
 
     test "selecting contact triggers suggestion generation", %{conn: conn, meeting: meeting} do
       mock_contact =
-        Contact.new(%{id: "123", first_name: "John", last_name: "Doe", email: "john@example.com"})
+        Contact.new(%{
+          id: "123",
+          first_name: "John",
+          last_name: "Doe",
+          email: "john@example.com",
+          provider: "hubspot"
+        })
 
       mock_suggestions = [
         %{field: "phone", value: "555-1234", context: "Mentioned phone number"}
@@ -107,11 +132,14 @@ defmodule SocialScribeWeb.HubspotModalMoxTest do
     end
 
     test "contact dropdown shows search results", %{conn: conn, meeting: meeting} do
-      mock_contact = %{
-        id: "789",
-        display_name: "Test User",
-        email: "test@example.com"
-      }
+      mock_contact =
+        Contact.new(%{
+          id: "789",
+          first_name: "Test",
+          last_name: "User",
+          email: "test@example.com",
+          provider: "hubspot"
+        })
 
       SocialScribe.CrmApiMock
       |> expect(:search_contacts, fn _credential, _query ->

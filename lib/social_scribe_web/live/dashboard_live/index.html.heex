@@ -1,11 +1,16 @@
-<div class="space-y-6">
+<div class="space-y-4">
   <div>
-    <h1 class="text-2xl font-bold tracking-tight">{@page_title}</h1>
+    <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+      {@page_title}
+      <.simple_tooltip
+        text="Currently we only support Google Calendar's Primary Calendar."
+        position="bottom"
+      >
+        <.info class="w-4 h-4 text-muted-foreground cursor-help" />
+      </.simple_tooltip>
+    </h1>
     <p class="text-muted-foreground">
       Your unified schedule from all connected Google Accounts.
-    </p>
-    <p class="text-xs text-muted-foreground flex items-center gap-1.5 mt-2">
-      <.info class="w-3.5 h-3.5" /> Currently we only support Google Calendar's Primary Calendar.
     </p>
   </div>
 
@@ -29,7 +34,7 @@
             <div class="min-w-0 flex-1">
               <h3 class="font-semibold text-foreground truncate">{event.summary}</h3>
               <p class="text-sm text-muted-foreground mt-1">
-                {Timex.format!(event.start_time, "%m/%d/%Y, %H:%M:%S", :strftime)}
+                <.date_time datetime={event.start_time} format="datetime" />
               </p>
             </div>
             <div class="flex items-center gap-3 flex-shrink-0">

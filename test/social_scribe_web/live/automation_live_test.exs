@@ -82,7 +82,9 @@ defmodule SocialScribeWeb.AutomationLiveTest do
     test "updates automation in listing", %{conn: conn, automation: automation} do
       {:ok, index_live, _html} = live(conn, ~p"/dashboard/automations")
 
-      assert index_live |> element("#automations-#{automation.id} a", "Edit") |> render_click() =~
+      assert index_live
+             |> element("#automations-#{automation.id} a[data-phx-link='patch']")
+             |> render_click() =~
                "Edit Automation"
 
       assert_patch(index_live, ~p"/dashboard/automations/#{automation}/edit")
@@ -105,7 +107,13 @@ defmodule SocialScribeWeb.AutomationLiveTest do
     test "deletes automation in listing", %{conn: conn, automation: automation} do
       {:ok, index_live, _html} = live(conn, ~p"/dashboard/automations")
 
-      assert index_live |> element("#automations-#{automation.id} a", "Delete") |> render_click()
+      # The delete button is an icon button with data-confirm
+      assert index_live
+             |> element(
+               "#automations-#{automation.id} a[data-confirm='Are you sure you want to delete this automation?']"
+             )
+             |> render_click()
+
       refute has_element?(index_live, "#automations-#{automation.id}")
     end
   end
@@ -156,6 +164,101 @@ defmodule SocialScribeWeb.AutomationLiveTest do
       html = render(show_live)
       assert html =~ "Automation updated successfully"
       assert html =~ "some updated name"
+    end
+
+    test "renders markdown in example section on show page", %{
+      conn: conn,
+      automation: _automation
+    } do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      automation =
+        automation_fixture(%{
+          user_id: user.id,
+          example: "# Example Heading\n\nThis is **bold** and *italic* text"
+        })
+
+      {:ok, _show_live, html} = live(conn, ~p"/dashboard/automations/#{automation}")
+
+      # Check that markdown is rendered as HTML (Earmark adds newlines)
+      assert html =~ ~s(<h1>)
+      assert html =~ "Example Heading"
+      assert html =~ ~s(</h1>)
+      assert html =~ "<strong>bold</strong>"
+      assert html =~ "<em>italic</em>"
+      assert html =~ "markdown-content"
+    end
+
+    test "renders markdown links in example section", %{conn: conn, automation: _automation} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      automation =
+        automation_fixture(%{
+          user_id: user.id,
+          example: "Check out [this link](https://example.com)"
+        })
+
+      {:ok, _show_live, html} = live(conn, ~p"/dashboard/automations/#{automation}")
+
+      assert html =~ ~s(href="https://example.com")
+      assert html =~ "this link"
+      assert html =~ "markdown-content"
+    end
+
+    test "renders markdown code blocks in example section", %{conn: conn, automation: _automation} do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      automation =
+        automation_fixture(%{
+          user_id: user.id,
+          example: "```elixir\ndef hello, do: :world\n```"
+        })
+
+      {:ok, _show_live, html} = live(conn, ~p"/dashboard/automations/#{automation}")
+
+      assert html =~ "<pre"
+      assert html =~ "<code"
+      assert html =~ "def hello, do: :world"
+      assert html =~ "markdown-content"
+    end
+
+    test "renders complex markdown with multiple elements in example", %{
+      conn: conn,
+      automation: _automation
+    } do
+      user = user_fixture()
+      conn = log_in_user(conn, user)
+
+      automation =
+        automation_fixture(%{
+          user_id: user.id,
+          example: """
+          # Title
+
+          Paragraph with **bold** and *italic*.
+
+          - List item 1
+          - List item 2
+
+          `code` and [link](https://example.com)
+          """
+        })
+
+      {:ok, _show_live, html} = live(conn, ~p"/dashboard/automations/#{automation}")
+
+      assert html =~ ~s(<h1>)
+      assert html =~ "Title"
+      assert html =~ ~s(</h1>)
+      assert html =~ "<strong>bold</strong>"
+      assert html =~ "<em>italic</em>"
+      assert html =~ "<ul>"
+      assert html =~ "<code"
+      assert html =~ "code"
+      assert html =~ ~s(href="https://example.com")
+      assert html =~ "markdown-content"
     end
   end
 end

@@ -16,19 +16,20 @@
               <h1 class="text-xl font-semibold tracking-tight">{@meeting.title}</h1>
               <.platform_logo recall_bot={@meeting.recall_bot} class="w-5 h-5" />
             </div>
-            <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span class="flex items-center gap-1">
+
+            <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+              <span class="flex items-center gap-1.5">
                 <.icon name="hero-calendar" class="w-4 h-4" />
-                {@meeting.recorded_at}
+                <.date_time datetime={@meeting.recorded_at} format="datetime" />
               </span>
-              <span class="flex items-center gap-1">
+              <span class="flex items-center gap-1.5">
                 <.icon name="hero-clock" class="w-4 h-4" />
                 {format_duration(@meeting.duration_seconds)}
               </span>
               <.link
                 href={@meeting.calendar_event.html_link || "#"}
                 target="_blank"
-                class="flex items-center gap-1 text-primary hover:underline"
+                class="flex items-center gap-1.5 text-primary hover:underline"
               >
                 <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4" /> Google Calendar
               </.link>
@@ -39,7 +40,7 @@
               </h3>
               <%= if Enum.any?(@meeting.meeting_participants) do %>
                 <div class="flex items-center gap-2">
-                  <div class="flex items-center gap-1 -space-x-2.5 overflow-hidden">
+                  <div class="flex items-center -space-x-2.5 overflow-hidden">
                     <%= for participant <- Enum.take(@meeting.meeting_participants, 8) do %>
                       <% color = participant_color(participant.name) %>
                       <.tooltip content={
@@ -49,11 +50,9 @@
                           participant.name || "Unknown"
                         end
                       }>
-                        <div class={"relative inline-flex shrink-0 #{color.bg}"}>
-                          <span class={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium #{color.text} ring-2 ring-background"}>
-                            {String.at(participant.name || "?", 0) |> String.upcase()}
-                          </span>
-                        </div>
+                        <span class={"relative inline-flex shrink-0 w-8 h-8 items-center justify-center text-sm font-medium rounded-full #{color.bg} #{color.text} ring-2 ring-background"}>
+                          {String.at(participant.name || "?", 0) |> String.upcase()}
+                        </span>
                       </.tooltip>
                     <% end %>
                     <%= if Enum.count(@meeting.meeting_participants) > 8 do %>
@@ -65,24 +64,44 @@
                   <.button
                     variant="link"
                     size="sm"
-                    class="h-8 text-xs"
+                    class="h-auto p-0 text-xs"
                     phx-click={SocialScribeWeb.UI.Dialog.show_modal("attendees-modal")}
                   >
                     View all
                   </.button>
                 </div>
               <% else %>
-                <p class="text-sm italic text-muted-foreground">No attendees</p>
+                <span class="text-sm italic text-muted-foreground">No attendees</span>
               <% end %>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <%= for entry <- @crm_entries do %>
-              <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{entry.provider}"}>
-                <.button class={entry.button_class}>
-                  Update {entry.label}
+
+          <div class="flex items-center gap-2 shrink-0">
+            <%= if @show_crm_selector do %>
+              <%!-- Show CRM selection when no CRM is associated or user wants to change --%>
+              <%= for option <- @crm_selection_options do %>
+                <.button
+                  phx-click="set_crm_provider"
+                  phx-value-provider={option.provider}
+                  class={option.button_class}
+                >
+                  Use {option.label}
                 </.button>
-              </.link>
+              <% end %>
+            <% else %>
+              <%= for entry <- @crm_entries do %>
+                <%= if entry.provider == :change_crm do %>
+                  <.button phx-click="show_crm_selector" class={entry.button_class}>
+                    {entry.label}
+                  </.button>
+                <% else %>
+                  <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{entry.provider}"}>
+                    <.button class={entry.button_class}>
+                      Update {entry.label}
+                    </.button>
+                  </.link>
+                <% end %>
+              <% end %>
             <% end %>
           </div>
         </div>
@@ -114,10 +133,14 @@
               <.textarea
                 field={@follow_up_email_form[:follow_up_email]}
                 value={@meeting.follow_up_email}
-                rows={6}
+                rows={8}
+                class="text-sm"
               />
             </.form_field>
-            <.clipboard_button id="follow-up-email-button" text={@meeting.follow_up_email || ""} />
+            <.clipboard_button
+              id={"clipboard-button-#{@meeting.id}"}
+              text={@meeting.follow_up_email || ""}
+            />
           </.form>
         <% end %>
       </.card_content>
@@ -135,16 +158,19 @@
           <% @user_has_automations && Enum.any?(@automation_results) && !has_only_failed_results(@automation_results) -> %>
             <div class="space-y-2">
               <%= for result <- @automation_results do %>
-                <div class="flex items-center justify-between px-3 py-2 transition-colors rounded-md bg-muted hover:bg-accent">
-                  <span class="flex-1 text-sm font-medium">{result.automation.name}</span>
+                <div class="flex items-center justify-between gap-3 px-4 py-3 transition-colors rounded-lg bg-muted/50 hover:bg-muted">
+                  <span class="flex-1 text-sm font-medium truncate">
+                    {result.automation.name}
+                  </span>
                   <.link patch={~p"/dashboard/meetings/#{@meeting}/draft_post/#{result.id}"}>
-                    <.button variant="ghost" size="sm">View Draft</.button>
+                    <.button variant="ghost" size="sm" class="shrink-0">View Draft</.button>
                   </.link>
                 </div>
               <% end %>
             </div>
           <% @user_has_automations -> %>
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col items-center justify-center py-8 text-center space-y-3">
+              <.icon name="hero-document-text" class="w-10 h-10 text-muted-foreground/50" />
               <p class="text-sm text-muted-foreground">
                 {if Enum.any?(@automation_results),
                   do: "Generation failed. Try again?",
@@ -161,15 +187,18 @@
               </.button>
             </div>
           <% !@user_has_automations -> %>
-            <p class="text-sm text-muted-foreground">No active automations.</p>
+            <div class="flex flex-col items-center justify-center py-8 text-center space-y-2">
+              <.icon name="hero-document-text" class="w-10 h-10 text-muted-foreground/50" />
+              <p class="text-sm text-muted-foreground">No active automations.</p>
+            </div>
         <% end %>
       </.card_content>
     </.card>
 
     <%!-- Transcript --%>
-    <.card>
-      <.card_header>
-        <.card_title class="flex items-center gap-2">
+    <.card class="lg:col-span-2">
+      <.card_header class="pb-3">
+        <.card_title class="flex items-center gap-2 text-lg">
           <.icon name="hero-chat-bubble-bottom-center-text" class="w-5 h-5" /> Transcript
         </.card_title>
       </.card_header>
@@ -237,11 +266,9 @@
           <% color = participant_color(participant.name) %>
           <li class="flex items-center justify-between gap-3 px-3 py-2 rounded-md bg-muted/50">
             <div class="flex items-center min-w-0 gap-3">
-              <div class={"relative inline-flex shrink-0 #{color.bg}"}>
-                <span class={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium #{color.text}"}>
-                  {String.at(participant.name || "?", 0) |> String.upcase()}
-                </span>
-              </div>
+              <span class={"relative inline-flex shrink-0 w-8 h-8 items-center justify-center text-sm font-medium rounded-full #{color.bg} #{color.text}"}>
+                {String.at(participant.name || "?", 0) |> String.upcase()}
+              </span>
               <span class={"text-sm truncate #{color.text}"}>
                 {participant.name || "Unknown"}
               </span>

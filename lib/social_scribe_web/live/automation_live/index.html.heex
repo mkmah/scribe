@@ -33,102 +33,73 @@
     <div class="space-y-3">
       <%= for automation <- @automations do %>
         <.card id={"automations-#{automation.id}"} class="overflow-hidden">
-          <div class="flex items-stretch">
-            <!-- Icon/Sidebar -->
-            <div
-              class="w-1.5 bg-muted/30"
-              class={if automation.is_active, do: "bg-primary", else: "bg-muted/30"}
-            >
-            </div>
-
-            <.card_content class="flex-1 p-6">
-              <div class="flex items-start gap-6">
-                <!-- Left: Main Content -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-3 mb-3">
-                    <div class="p-2 rounded-md bg-muted">
-                      <.icon
-                        name={
-                          case automation.platform do
-                            "linkedin" -> "hero-linkedin"
-                            "facebook" -> "hero-facebook"
-                            "twitter" -> "hero-x"
-                            _ -> "hero-rocket-launch"
-                          end
-                        }
-                        class="w-4 h-4"
-                      />
-                    </div>
-                    <.badge variant="outline" class="text-xs font-normal">
-                      {automation.platform}
-                    </.badge>
-                    <.status_badge
-                      status={if automation.is_active, do: "active", else: "inactive"}
-                      class="ml-auto"
-                    >
-                      {if automation.is_active, do: "Active", else: "Paused"}
-                    </.status_badge>
-                  </div>
-
-                  <.link
-                    navigate={~p"/dashboard/automations/#{automation}"}
-                    class="block group mb-2"
-                  >
-                    <h3 class="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+          <.card_content class="p-4">
+            <div class="flex items-center gap-4">
+              <!-- Platform Icon -->
+              <div class="p-2.5 rounded-lg bg-muted shrink-0">
+                <.icon
+                  name={
+                    case automation.platform do
+                      "linkedin" -> "hero-linkedin"
+                      "facebook" -> "hero-facebook"
+                      "twitter" -> "hero-x"
+                      _ -> "hero-rocket-launch"
+                    end
+                  }
+                  class="w-5 h-5"
+                />
+              </div>
+              
+<!-- Main Content -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <.link navigate={~p"/dashboard/automations/#{automation}"} class="group">
+                    <h3 class="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                       {automation.name}
                     </h3>
                   </.link>
-
-                  <p class="text-muted-foreground mb-4">
-                    {automation.description}
-                  </p>
-                  
-<!-- Example Section -->
-                  <div class="p-4 rounded-lg bg-muted/50">
-                    <p class="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
-                      Example output
-                    </p>
-                    <p class="text-sm text-foreground/80 italic">
-                      {automation.example}
-                    </p>
-                  </div>
+                  <.badge variant="secondary" class="text-xs">
+                    {automation.platform}
+                  </.badge>
                 </div>
-                
-<!-- Right: Actions & Toggle -->
-                <div class="flex flex-col items-end gap-4 pt-1">
-                  <.switch
-                    name="automation_#{automation.id}"
-                    checked={automation.is_active}
-                    phx-click="toggle_automation"
-                    phx-value-id={automation.id}
-                  />
-
-                  <div class="flex items-center gap-2">
-                    <.link patch={~p"/dashboard/automations/#{automation}/edit"}>
-                      <.button variant="ghost" size="sm">
-                        <.icon name="hero-pencil" class="w-4 h-4 mr-1.5" /> Edit
-                      </.button>
-                    </.link>
-                    <.link
-                      phx-click={
-                        JS.push("delete", value: %{id: automation.id})
-                        |> JS.hide(to: "#automations-#{automation.id}")
-                      }
-                      data-confirm="Are you sure you want to delete this automation?"
-                    >
-                      <.button
-                        variant="ghost"
-                        size="sm"
-                        class="text-destructive hover:text-destructive"
-                      >
-                        <.icon name="hero-trash" class="w-4 h-4 mr-1.5" /> Delete
-                      </.button>
-                    </.link>
-                  </div>
-                </div>
+                <p class="text-sm text-muted-foreground truncate">
+                  {automation.description}
+                </p>
               </div>
-            </.card_content>
-          </div>
+              
+<!-- Actions -->
+              <div class="flex items-center gap-2 shrink-0">
+                <.switch
+                  name="automation_#{automation.id}"
+                  checked={automation.is_active}
+                  phx-click="toggle_automation"
+                  phx-value-id={automation.id}
+                />
+
+                <.link patch={~p"/dashboard/automations/#{automation}/edit"}>
+                  <.button variant="ghost" size="icon" class="h-9 w-9">
+                    <.icon name="hero-pencil" class="w-4 h-4" />
+                  </.button>
+                </.link>
+
+                <.link
+                  phx-click={
+                    JS.push("delete", value: %{id: automation.id})
+                    |> JS.hide(to: "#automations-#{automation.id}")
+                  }
+                  data-confirm="Are you sure you want to delete this automation?"
+                >
+                  <.button
+                    variant="ghost"
+                    size="icon"
+                    class="h-9 w-9 text-destructive hover:text-destructive"
+                  >
+                    <.icon name="hero-trash" class="w-4 h-4" />
+                  </.button>
+                </.link>
+              </div>
+            </div>
+          </.card_content>
         </.card>
       <% end %>
     </div>

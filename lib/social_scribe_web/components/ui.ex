@@ -20,6 +20,7 @@ defmodule SocialScribeWeb.UI do
   - **UI.Tabs** - Tab navigation
   - **UI.Tooltip** - Hover tooltips
   - **UI.DropdownMenu** - Dropdown menus
+  - **UI.DateTime** - Date/time formatting in browser's local timezone
 
   ## Usage
 
@@ -37,6 +38,7 @@ defmodule SocialScribeWeb.UI do
       import SocialScribeWeb.UI.Badge
       import SocialScribeWeb.UI.Button
       import SocialScribeWeb.UI.Card
+      import SocialScribeWeb.UI.DateTime
       import SocialScribeWeb.UI.Dialog
       import SocialScribeWeb.UI.DropdownMenu
       import SocialScribeWeb.UI.Form

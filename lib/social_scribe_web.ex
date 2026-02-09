@@ -90,6 +90,9 @@ defmodule SocialScribeWeb do
       # New shadcn/ui-style components
       use SocialScribeWeb.UI
 
+      # Markdown helpers
+      import SocialScribeWeb.Helpers.Markdown
+
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 

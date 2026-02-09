@@ -78,7 +78,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponent do
       {:ok, _} ->
         socket =
           socket
-          |> put_flash(:info, "Post successful")
+          |> put_flash(:success, "Post successful")
           |> push_patch(to: socket.assigns.patch)
 
         {:noreply, socket}
@@ -86,7 +86,7 @@ defmodule SocialScribeWeb.MeetingLive.DraftPostFormComponent do
       {:error, error} ->
         socket =
           socket
-          |> put_flash(:error, error)
+          |> put_flash(:danger, error)
           |> push_patch(to: socket.assigns.patch)
 
         {:noreply, socket}

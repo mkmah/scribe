@@ -90,7 +90,8 @@ defmodule SocialScribeWeb.MeetingLiveTest do
       _sf_cred = salesforce_credential_fixture(%{user_id: user.id})
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
-      assert html =~ "Update Salesforce"
+      # When no CRM is associated, shows "Use Salesforce" button
+      assert html =~ "Use Salesforce"
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/salesforce")
       assert has_element?(view, "#crm-modal-salesforce-wrapper")

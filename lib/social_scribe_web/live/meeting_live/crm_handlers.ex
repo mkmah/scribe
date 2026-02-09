@@ -61,7 +61,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlers do
       {:ok, _updated_contact} ->
         socket =
           socket
-          |> put_flash(:info, "Successfully updated #{map_size(updates)} field(s) in HubSpot")
+          |> put_flash(:success, "Successfully updated #{map_size(updates)} field(s) in HubSpot")
           |> push_patch(to: ~p"/dashboard/meetings/#{socket.assigns.meeting}")
 
         {:noreply, socket}
@@ -133,7 +133,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlers do
         socket =
           socket
           |> put_flash(
-            :info,
+            :success,
             "Successfully updated #{map_size(updates)} field(s) in #{provider_label}"
           )
           |> push_patch(to: ~p"/dashboard/meetings/#{socket.assigns.meeting}")

@@ -75,7 +75,7 @@ defmodule SocialScribeWeb.AutomationLive.Index do
 
       {:error, _changeset} ->
         {:noreply,
-         put_flash(socket, :error, "You can only have one active automation per platform")}
+         put_flash(socket, :danger, "You can only have one active automation per platform")}
     end
   end
 end

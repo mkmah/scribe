@@ -113,10 +113,10 @@ defmodule SocialScribeWeb.UI.Tooltip do
 
   def simple_tooltip(assigns) do
     ~H"""
-    <span class={["group relative inline-block", @class]} data-tooltip={@text}>
+    <span class={["group relative inline-block", @class]}>
       {render_slot(@inner_block)}
       <span class={[
-        "absolute z-50 hidden whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background opacity-0 transition-opacity group-hover:block group-hover:opacity-100",
+        "absolute z-[100] hidden whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-background opacity-0 transition-opacity group-hover:block group-hover:opacity-100 pointer-events-none",
         position_classes(@position)
       ]}>
         {@text}

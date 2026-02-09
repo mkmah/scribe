@@ -1,29 +1,38 @@
-# Deployment Guide (Railway)
+# Deployment Guide (Fly.io)
 
 ## Prerequisites
 
+- A [Fly.io](https://fly.io/) account.
+- `flyctl` command-line tool installed (see [Install flyctl](https://fly.io/docs/hands-on/install-flyctl/)).
 - Reliable GitHub repository containing the latest code.
-- A [Railway](https://railway.app/) account.
 
 ## Deployment Steps
 
-1. **Create New Project**
-    - Log in to Railway.
-    - Click "New Project" -> "Deploy from GitHub repo".
-    - Select the `social_scribe` repository.
+1. **Login to Fly.io**
+    - Run `fly auth login` in your terminal to authenticate.
 
-2. **Add Database**
-    - In your project dashboard, click "New" -> "Database" -> "PostgreSQL".
-    - Railway will automatically provision a database and provide a `DATABASE_URL` environment variable.
+2. **Initialize App (First Time Only)**
+    - If you haven't launched the app yet, run `fly launch`.
+    - Since a `fly.toml` file already exists, it will use that configuration.
+    - Follow the prompts to set up your app name and region (if not already set in `fly.toml` or overridden).
+    - **Database**: If prompted to set up a Postgres database, say **Yes**. This will automatically provision a Fly Postgres database and set the `DATABASE_URL` secret.
+    - **Deploy**: You can choose to deploy now or later.
 
-3. **Configure Environment Variables**
-    - Go to the "Settings" or "Variables" tab of your application service.
-    - Add the following required variables:
+3.  **Configure Secrets (Environment Variables)**
+    - Set the required secrets using `fly secrets set`. You can set multiple secrets at once.
+    - Example command:
+      ```bash
+      fly secrets set SECRET_KEY_BASE="<generated_secret>" \
+        GOOGLE_CLIENT_ID="<your_client_id>" \
+        GOOGLE_CLIENT_SECRET="<your_client_secret>" \
+        ... (other vars)
+      ```
+    - **Required Variables**:
 
     | Variable Name | Description | Example / Notes |
     | :--- | :--- | :--- |
     | `SECRET_KEY_BASE` | Phoenix secret key | Generate with `mix phx.gen.secret` locally |
-    | `PHX_HOST` | The public domain of your app | e.g. `social-scribe-production.up.railway.app` |
+    | `PHX_HOST` | The public domain of your app | e.g., `social-scribe.fly.dev` |
     | `GOOGLE_CLIENT_ID` | OAuth Client ID | Google Cloud Console |
     | `GOOGLE_CLIENT_SECRET` | OAuth Client Secret | Google Cloud Console |
     | `GOOGLE_REDIRECT_URI` | Auth Callback URL | `https://<YOUR_PHX_HOST>/auth/google/callback` |
@@ -41,14 +50,16 @@
     | `HUBSPOT_REDIRECT_URI` | Callback URL | `https://<YOUR_PHX_HOST>/auth/hubspot/callback` |
     | `POOL_SIZE` | DB Connection Pool | Default: `10` |
 
-    *Note: `DATABASE_URL` and `PORT` are automatically handled by Railway.*
+    *Note: `DATABASE_URL` is automatically set when you attach a Fly Postgres database.*
+    *Note: `PORT` is automatically handled by Fly.io (defaults to 8080 as per `fly.toml`).*
 
-4. **Build and Deploy**
-    - Railway automatically detects the `Dockerfile` in the root.
-    - Push changes to your main branch to trigger a deployment.
-    - Monitor the "Deploy Logs" for successful build and startup.
+4. **Deploy**
+    - Run `fly deploy` to build and deploy your application.
+    - Fly.io will use the `Dockerfile` in the root directory.
+    - It will also run the release command defined in `fly.toml` (`/app/bin/migrate`) to run database migrations automatically on deployment.
 
-5. **Post-Deployment**
-    - Once deployed, run migrations via the Railway CLI or by adding a start command if not auto-handled (The Dockerfile launches the server, migrations typically run on startup if configured in `release.ex` or need to be run manually).
-    - To run migrations manually via Railway CLI: `railway run mix ecto.migrate` (if entering the specific container context) or utilize a release command if set up in `rel/`.
-    *Note: The current `Dockerfile` CMD just starts the server. Ensure migrations are part of your startup script or run them as a one-off command.*
+5. **Troubleshooting**
+    - **Logs**: Run `fly logs` to see live logs from your application.
+    - **Status**: Run `fly status` to check the status of your machines.
+    - **SSH**: Run `fly ssh console` to SSH into your running container for debugging.
+

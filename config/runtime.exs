@@ -35,6 +35,7 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
 
 config :social_scribe, :recall_api_key, System.get_env("RECALL_API_KEY")
 config :social_scribe, :recall_region, System.get_env("RECALL_REGION")
+config :social_scribe, :recall_webhook_secret, System.get_env("RECALL_WEBHOOK_SECRET")
 
 # LLM provider configuration
 # Set LLM_PROVIDER to "gemini" to use Google Gemini, defaults to "anthropic"

@@ -44,7 +44,8 @@ defmodule SocialScribeWeb.AuthControllerTest do
         |> get(~p"/auth/hubspot/callback")
 
       assert redirected_to(conn) == ~p"/dashboard/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "HubSpot"
+      conn = get(conn, ~p"/dashboard/settings")
+      assert Phoenix.Flash.get(conn.assigns.flash, :success) =~ "HubSpot"
       cred = Accounts.get_user_crm_credential(user.id, "hubspot")
       assert cred != nil
       assert cred.provider == "hubspot"
@@ -66,7 +67,8 @@ defmodule SocialScribeWeb.AuthControllerTest do
         |> get(~p"/auth/google/callback")
 
       assert redirected_to(conn) == ~p"/dashboard/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Google"
+      conn = get(conn, ~p"/dashboard/settings")
+      assert Phoenix.Flash.get(conn.assigns.flash, :success) =~ "Google"
 
       cred =
         Repo.get_by(SocialScribe.Accounts.UserCredential, user_id: user.id, provider: "google")

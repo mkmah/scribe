@@ -116,8 +116,8 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: ""})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: ""})
 
       assert render(view) =~ "Ask Anything"
     end
@@ -129,8 +129,8 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "   \n\t  "})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "   \n\t  "})
 
       assert render(view) =~ "Ask Anything"
     end
@@ -145,8 +145,8 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "What meetings do I have?"})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "What meetings do I have?"})
 
       html = render(view)
       assert html =~ "What meetings do I have?"
@@ -168,12 +168,12 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "First question"})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "First question"})
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "Second question"})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "Second question"})
 
       html = render(view)
       assert html =~ "First question"
@@ -194,8 +194,8 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "Test"})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "Test"})
 
       html = render(view)
       assert html =~ "Ask Anything"
@@ -217,8 +217,8 @@ defmodule SocialScribeWeb.Components.ChatPopupTest do
       view |> element("button[phx-click=\"toggle_chat\"]") |> render_click()
 
       view
-      |> form("form[phx-submit=\"send_message\"]", %{message: "Test"})
-      |> render_submit()
+      |> element("form[phx-submit=\"send_message\"]")
+      |> render_submit(%{message: "Test"})
 
       html = render(view)
       assert html =~ "Ask Anything"

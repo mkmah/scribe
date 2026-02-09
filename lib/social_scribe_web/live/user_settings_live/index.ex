@@ -77,10 +77,14 @@ defmodule SocialScribeWeb.UserSettingsLive.Index do
 
     case create_or_update_user_bot_preference(socket.assigns.user_bot_preference, params) do
       {:ok, bot_preference} ->
+        # Add a timestamp to force LiveView to detect the change
+        flash_timestamp = System.system_time(:millisecond)
+
         {:noreply,
          socket
          |> assign(:user_bot_preference, bot_preference)
-         |> put_flash(:info, "Bot preference updated successfully")}
+         |> assign(:flash_timestamp, flash_timestamp)
+         |> put_flash(:success, "Bot preference updated successfully")}
 
       {:error, changeset} ->
         {:noreply,
@@ -121,13 +125,13 @@ defmodule SocialScribeWeb.UserSettingsLive.Index do
           {:noreply,
            socket
            |> assign(assign_key, updated_accounts)
-           |> put_flash(:info, "#{String.capitalize(provider)} account disconnected.")}
+           |> put_flash(:success, "#{String.capitalize(provider)} account disconnected.")}
 
         {:error, _reason} ->
-          {:noreply, put_flash(socket, :error, "Could not disconnect account.")}
+          {:noreply, put_flash(socket, :danger, "Could not disconnect account.")}
       end
     else
-      {:noreply, put_flash(socket, :error, "Unauthorized.")}
+      {:noreply, put_flash(socket, :danger, "Unauthorized.")}
     end
   end
 
@@ -139,7 +143,7 @@ defmodule SocialScribeWeb.UserSettingsLive.Index do
       {:ok, _} ->
         socket =
           socket
-          |> put_flash(:info, "Facebook page selected successfully")
+          |> put_flash(:success, "Facebook page selected successfully")
           |> push_navigate(to: ~p"/dashboard/settings")
 
         {:noreply, socket}

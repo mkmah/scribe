@@ -232,8 +232,9 @@ defmodule SocialScribeWeb.UserAuthTest do
       assert conn.halted
 
       assert redirected_to(conn) == ~p"/users/log_in"
+      conn = conn |> fetch_flash()
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+      assert Phoenix.Flash.get(conn.assigns.flash, :danger) ==
                "You must log in to access this page."
     end
 

@@ -50,7 +50,7 @@ defmodule SocialScribeWeb.DashboardLive.Index do
 
             put_flash(
               socket,
-              :error,
+              :danger,
               "Failed to schedule recording bot. Please check your Recall API configuration."
             )
         end

@@ -19,7 +19,8 @@ defmodule SocialScribeWeb.SalesforceAuthTest do
         |> get(~p"/auth/salesforce/callback")
 
       assert redirected_to(conn) == ~p"/dashboard/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Salesforce"
+      conn = get(conn, ~p"/dashboard/settings")
+      assert Phoenix.Flash.get(conn.assigns.flash, :success) =~ "Salesforce"
 
       cred = Accounts.get_user_crm_credential(user.id, "salesforce")
       assert cred != nil
@@ -49,8 +50,9 @@ defmodule SocialScribeWeb.SalesforceAuthTest do
         |> get(~p"/auth/salesforce/callback")
 
       assert redirected_to(conn) == ~p"/dashboard/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Salesforce"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "successfully"
+      conn = get(conn, ~p"/dashboard/settings")
+      assert Phoenix.Flash.get(conn.assigns.flash, :success) =~ "Salesforce"
+      assert Phoenix.Flash.get(conn.assigns.flash, :success) =~ "successfully"
     end
 
     test "handles auth failure gracefully", %{conn: conn} do
@@ -63,7 +65,8 @@ defmodule SocialScribeWeb.SalesforceAuthTest do
         |> get(~p"/auth/salesforce/callback")
 
       assert redirected_to(conn) =~ ~p"/dashboard/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Could not connect Salesforce"
+      conn = get(conn, ~p"/dashboard/settings")
+      assert Phoenix.Flash.get(conn.assigns.flash, :danger) =~ "Could not connect Salesforce"
     end
 
     test "updates existing credential on re-auth", %{conn: conn, user: user} do
