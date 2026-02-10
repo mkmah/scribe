@@ -47,6 +47,7 @@ defmodule SocialScribeWeb.MeetingLive.ShowCrmTest do
       assert html =~ "Select CRM"
       # Only HubSpot should appear in the dropdown menu
       assert html =~ "HubSpot"
+
       # Salesforce should not appear in the CRM dropdown menu when global config restricts to HubSpot
       # Check for the dropdown menu item pattern specifically (Salesforce appears elsewhere in the page)
       refute html =~ ~s(phx-value-provider="salesforce")

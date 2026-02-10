@@ -28,7 +28,7 @@ defmodule SocialScribeWeb.ChatPopup.MessageList do
 
       <%= if Enum.empty?(@messages) do %>
         <div class="pt-4">
-          <p class="text-sm leading-relaxed text-muted-foreground">
+          <p class="text-base leading-relaxed text-muted-foreground">
             I can answer questions about your meetings and data &ndash; just ask!
           </p>
         </div>
@@ -37,7 +37,7 @@ defmodule SocialScribeWeb.ChatPopup.MessageList do
           <%= if message.role == "user" do %>
             <div class="flex justify-end">
               <div class="max-w-[85%] bg-muted rounded-2xl rounded-br-md px-4 py-2.5 border border-border/60 shadow-sm">
-                <div class="text-sm leading-relaxed text-foreground">
+                <div class="text-base leading-relaxed text-foreground">
                   <.message_content_block content={message.content} role={:user} />
                 </div>
               </div>
@@ -45,7 +45,7 @@ defmodule SocialScribeWeb.ChatPopup.MessageList do
           <% else %>
             <div class="flex justify-start">
               <div class="max-w-[85%]">
-                <div class="text-sm leading-relaxed text-gray-700 dark:text-gray-300 markdown-content">
+                <div class="text-base leading-relaxed text-gray-700 dark:text-gray-300 markdown-content">
                   <.message_content_block content={message.content} role={:assistant} />
                 </div>
                 <%!-- Sources below assistant replies --%>

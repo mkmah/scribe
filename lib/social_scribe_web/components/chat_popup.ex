@@ -357,7 +357,7 @@ defmodule SocialScribeWeb.ChatPopup do
         id="chat-panel"
         class={[
           "fixed bottom-6 right-6 z-50",
-          "w-[460px] h-[680px] max-h-[85vh]",
+          "w-[460px] h-[800px] max-h-[90vh]",
           "bg-card rounded-2xl shadow-lg border border-border",
           "flex flex-col overflow-hidden",
           "transition-all duration-300 ease-out origin-bottom-right",
@@ -506,7 +506,7 @@ defmodule SocialScribeWeb.ChatPopup do
                   Jason.encode!(Enum.map(@participants || [], fn p -> %{name: p.name} end))
                 }
               >
-                <div class="border-2 border-primary/40 rounded-xl overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all bg-background">
+                <div class="border-2 border-blue-500 rounded-xl overflow-hidden focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all bg-background">
                   <%!-- Add Context button (pill above input) --%>
                   <div class="px-3 pt-2.5">
                     <button
@@ -529,7 +529,7 @@ defmodule SocialScribeWeb.ChatPopup do
                     phx-hook="MentionInput"
                     phx-target={@myself}
                     phx-update="ignore"
-                    class="mention-input min-h-[72px] max-h-32 overflow-y-auto w-full px-4 py-2 text-sm text-gray-900 placeholder:text-gray-200 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-400 focus:ring-0 scrollbar-thin"
+                    class="mention-input h-[96px] max-h-40 overflow-y-auto w-full px-4 py-3 text-base text-gray-900 placeholder:text-gray-200 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-400 focus:ring-0 scrollbar-thin"
                     data-mentions={Enum.map_join(@mentions || [], ",", & &1.name)}
                   ></div>
                   <input
@@ -544,7 +544,7 @@ defmodule SocialScribeWeb.ChatPopup do
                     <button
                       type="submit"
                       disabled={@loading}
-                      class="flex items-center justify-center transition-all rounded-lg cursor-pointer w-7 h-7 bg-slate-600/10 hover:bg-slate-600/20 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center transition-all rounded-lg cursor-pointer w-7 h-7 bg-slate-600/10 hover:bg-slate-600/20 text-gray-500 dark:text-white disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Send"
                     >
                       <svg
