@@ -27,9 +27,11 @@ defmodule SocialScribeWeb.MeetingLive.ShowCrmTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # When no CRM is associated, shows "Use" buttons
-      assert html =~ "Use HubSpot"
-      assert html =~ "Use Salesforce"
+      # When no CRM is associated, shows "Select CRM" button with dropdown menu
+      assert html =~ "Select CRM"
+      # Both CRM providers should appear in the dropdown menu
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
     end
 
     test "shows only configured CRM button when global config is set", %{
@@ -41,10 +43,13 @@ defmodule SocialScribeWeb.MeetingLive.ShowCrmTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # When no CRM is associated, shows "Use" buttons
-      assert html =~ "Use HubSpot"
-      refute html =~ "Use Salesforce"
-      refute html =~ "Update Salesforce"
+      # When no CRM is associated, shows "Select CRM" button
+      assert html =~ "Select CRM"
+      # Only HubSpot should appear in the dropdown menu
+      assert html =~ "HubSpot"
+      # Salesforce should not appear in the CRM dropdown menu when global config restricts to HubSpot
+      # Check for the dropdown menu item pattern specifically (Salesforce appears elsewhere in the page)
+      refute html =~ ~s(phx-value-provider="salesforce")
     end
   end
 

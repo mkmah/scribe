@@ -1,4 +1,11 @@
-import { getThemePref, applyTheme, updateIndicators, setTheme } from "./theme"
+import { getThemePref, updateIndicators, setTheme } from "./theme"
+import { extractTextWithMentions, cleanupEmptyNodes, updatePlaceholderVisibility, isTrulyEmpty } from "./mention/dom-utils.js"
+import { insertPillAtEnd, insertPillAtCursor, rebuildMentionsFromDOM } from "./mention/pill-manager.js"
+import { showMenu, hideMenu } from "./mention/menu-manager.js"
+import { restoreContent, setupMutationObserver } from "./mention/content-restorer.js"
+import { handleInput as handleInputEvent } from "./mention/input-handler.js"
+import { loadParticipants, getParticipants, clearInput, setupFormListeners, syncContentToHiddenInput, handleFormSubmit } from "./mention/form-handler.js"
+import { handleKeydown } from "./mention/keydown-handler.js"
 
 let Hooks = {}
 
@@ -245,28 +252,28 @@ Hooks.LocalDateTime = {
         }
     },
     _formatDate(date) {
-        return new Intl.DateTimeFormat(undefined, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        }).format(date)
+        // Format as "November 13, 2025" (month name, day number, comma, year)
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December']
+        const month = monthNames[date.getMonth()]
+        const day = date.getDate()
+        const year = date.getFullYear()
+        return `${month} ${day}, ${year}`
     },
     _formatTime(date) {
-        return new Intl.DateTimeFormat(undefined, {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }).format(date)
+        // Format time as HH:MMam/pm (lowercase, no space)
+        const hour = date.getHours()
+        const minute = date.getMinutes()
+        const ampm = hour >= 12 ? 'pm' : 'am'
+        const hour12 = hour % 12 || 12
+        const minuteStr = minute.toString().padStart(2, '0')
+        return `${hour12}:${minuteStr}${ampm}`
     },
     _formatDateAndTime(date) {
-        return new Intl.DateTimeFormat(undefined, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        }).format(date)
+        // Format as "11:17am - November 13, 2025"
+        const time = this._formatTime(date)
+        const dateStr = this._formatDate(date)
+        return `${time} - ${dateStr}`
     },
     _formatShort(date) {
         return new Intl.DateTimeFormat(undefined, {
@@ -283,88 +290,55 @@ Hooks.LocalDateTime = {
         }).format(date)
     },
     _formatLong(date) {
-        return new Intl.DateTimeFormat(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }).format(date)
+        // Format as "November 3, 2025" (same as date format)
+        return this._formatDate(date)
     }
 }
 
 // Enhanced mention input with cursor positioning and pill rendering
 Hooks.MentionInput = {
     mounted() {
-        this.mentions = []
         this.phxTarget = this.el.getAttribute("phx-target")
-        this.dropdown = null
-        this.selectedIndex = 0
-        this.isMenuVisible = false
-        this.atSymbolIndex = -1
         this.isContentEditable = this.el.getAttribute("contenteditable") === "true"
-        this.participants = []
-        // Store content to preserve across LiveView updates
-        this._storedContent = null
-        this._storedCursorPos = null
-        this._isRestoring = false
-        this._restorationTimeout = null
-
-        // Load participants from form data attribute (HTML-unescaped by the browser)
-        const form = this.el.closest("form")
-        if (form && form.dataset.participants) {
-            try {
-                this.participants = JSON.parse(form.dataset.participants)
-            } catch (e) {
-                console.error("Failed to parse participants data:", e)
-            }
+        
+        // Consolidated state management
+        this.state = {
+            mentions: [],
+            selectedIndex: 0,
+            isMenuVisible: false,
+            atSymbolIndex: -1,
+            storedContent: null,
+            isInserting: false
         }
 
+        // Load participants from form data attribute
+        this.state.participants = loadParticipants(this.el)
+
+        // Helper to get text content
+        this._getTextContent = () => extractTextWithMentions(this.el)
+
         this._setupEventListeners()
-        this._setupMutationObserver()
-        this._cleanupEmptyNodes()
+        
+        // Setup mutation observer (simplified - phx-update="ignore" means LiveView won't touch this)
+        this._observer = setupMutationObserver(this.el, {
+            onRestore: () => {
+                this.state.mentions = rebuildMentionsFromDOM(this.el)
+            }
+        })
+        
+        cleanupEmptyNodes(this.el)
+        updatePlaceholderVisibility(this.el)
     },
 
     updated() {
-        // When LiveView updates, the textarea might get cleared
-        // Use the mutation observer to restore content
-        // The observer will handle the restoration after all patches are applied
-    },
-
-    _setupMutationObserver() {
-        // Watch for LiveView patches that might clear our content
-        this._observer = new MutationObserver((mutations) => {
-            if (this._isRestoring) return
-            if (this._storedContent === null) return
-
-            const currentHTML = this.el.innerHTML
-            const currentText = this._getTextContentFromHTML(currentHTML)
-            const storedText = this._getTextContentFromHTML(this._storedContent)
-            const hasPills = this.el.querySelector(".mention-pill") !== null
-
-            console.log('[MutationObserver] currentText:', currentText, 'storedText:', storedText, 'hasPills:', hasPills)
-
-            // Only restore if content was cleared and we had something stored
-            if (storedText && !currentText.trim() && !hasPills) {
-                this._isRestoring = true
-                console.log('[MutationObserver] Restoring content:', this._storedContent)
-                this.el.innerHTML = this._storedContent
-                if (this._storedCursorPos !== null) {
-                    this._setCaretPosition(this._storedCursorPos)
-                }
-
-                // Keep stored content for a bit longer in case there are more updates
-                setTimeout(() => {
-                    this._storedContent = null
-                    this._storedCursorPos = null
-                    this._isRestoring = false
-                }, 100)
-            }
-        })
-
-        this._observer.observe(this.el, {
-            childList: true,
-            characterData: true,
-            subtree: true
-        })
+        // With phx-update="ignore", LiveView shouldn't touch this element
+        // Just update placeholder visibility
+        updatePlaceholderVisibility(this.el)
+        
+        // If content is empty and we're not inserting, clear stored content
+        if (isTrulyEmpty(this.el) && !this.state.isInserting) {
+            this.state.storedContent = null
+        }
     },
 
     destroyed() {
@@ -373,111 +347,37 @@ Hooks.MentionInput = {
         }
     },
 
-    _getTextContentFromHTML(html) {
-        // Extract text content from HTML string (excluding pills)
-        const div = document.createElement("div")
-        div.innerHTML = html
-        // Remove all mention pills
-        div.querySelectorAll(".mention-pill").forEach(pill => pill.remove())
-        return div.textContent.trim()
-    },
-
-    _storeContentState() {
-        // Store current content and cursor position before LiveView update
-        this._storedContent = this.el.innerHTML
-        this._storedCursorPos = this._getCaretPosition()
-    },
-
-    _cleanupEmptyNodes() {
-        // Remove empty text nodes to ensure :empty pseudo-class works
-        // Only clean up when contenteditable is empty or nearly empty
-        // Preserve user-typed spaces and line breaks (<br>)
-        const textNodes = []
-        const walker = document.createTreeWalker(
-            this.el,
-            NodeFilter.SHOW_TEXT,
-            null
-        )
-
-        let node
-        while (node = walker.nextNode()) {
-            textNodes.push(node)
-        }
-
-        // Check if there's any real content (pills or non-whitespace text)
-        const hasPills = this.el.querySelector(".mention-pill") !== null
-        const hasNonWhitespaceText = textNodes.some(tn => tn.textContent.trim() !== "")
-
-        // Only clean up if there's no real content
-        if (!hasPills && !hasNonWhitespaceText) {
-            // Remove all empty text nodes and <br> elements when truly empty
-            textNodes.forEach(textNode => {
-                if (textNode.textContent === "") {
-                    textNode.remove()
-                }
-            })
-            this.el.querySelectorAll('br').forEach(br => br.remove())
-        } else {
-            // When there's content, only remove truly empty nodes (not whitespace-only)
-            textNodes.forEach(textNode => {
-                if (textNode.textContent === "") {
-                    textNode.remove()
-                }
-            })
-            // Preserve <br> elements when there's content (they're line breaks)
-        }
-    },
-
-    _ensureValidCursor() {
-        // Ensure cursor is in a valid position after cleanup
-        // If contenteditable is empty, place cursor at start
-        // Otherwise, ensure cursor is in a valid text node or at end
-        const selection = window.getSelection()
-        if (!selection.rangeCount) {
-            const newRange = document.createRange()
-            newRange.selectNodeContents(this.el)
-            newRange.collapse(true)
-            selection.addRange(newRange)
-            return
-        }
-
-        const currentRange = selection.getRangeAt(0)
-        const startContainer = currentRange.startContainer
-
-        // If cursor is in a removed node or invalid position, reposition it
-        if (!this.el.contains(startContainer) || (startContainer.nodeType === Node.ELEMENT_NODE && startContainer.classList?.contains("mention-pill"))) {
-            // Place cursor at end of content or start if empty
-            const newRange = document.createRange()
-            if (this.el.childNodes.length === 0) {
-                newRange.setStart(this.el, 0)
-                newRange.collapse(true)
-            } else {
-                const lastNode = this.el.lastChild
-                if (lastNode.nodeType === Node.TEXT_NODE) {
-                    newRange.setStart(lastNode, lastNode.length)
-                } else {
-                    newRange.setStartAfter(lastNode)
-                }
-                newRange.collapse(true)
-            }
-            selection.removeAllRanges()
-            selection.addRange(newRange)
-        }
-    },
-
     _setupEventListeners() {
         if (this.isContentEditable) {
             // Contenteditable div handling
             this.el.addEventListener("input", (e) => {
-                this._handleInput(e)
+                handleInputEvent(this.el, e, this._getTextContent, {
+                    onMentionTrigger: (filter, index) => {
+                        this.state.atSymbolIndex = index
+                        this.state.selectedIndex = 0
+                        this.state.isMenuVisible = true
+                        showMenu(getParticipants(this.el), filter, this.el, (name) => {
+                            this._insertMentionPill(name)
+                        })
+                    },
+                    onMentionHide: () => {
+                        hideMenu()
+                        this.state.isMenuVisible = false
+                    }
+                }, this.state)
             })
 
             this.el.addEventListener("keydown", (e) => {
-                this._handleKeydown(e)
+                handleKeydown(e, this.el, this.state, this._getTextContent, (name) => {
+                    this._insertMentionPill(name)
+                }, () => {
+                    this._submitForm()
+                })
             })
 
             this.el.addEventListener("click", () => {
-                this._hideMentionMenu()
+                hideMenu()
+                this.state.isMenuVisible = false
             })
 
             // Prevent paste from bringing in formatting
@@ -487,33 +387,15 @@ Hooks.MentionInput = {
                 document.execCommand("insertText", false, text)
             })
 
-            // Store content state before events that cause LiveView re-renders
-            // Find the "Add context" button and intercept its click
-            const form = this.el.closest("form")
-            if (form) {
-                const addContextBtn = form.querySelector('[phx-click="toggle_context_menu"]')
-                if (addContextBtn) {
-                    addContextBtn.addEventListener("click", () => {
-                        this._storeContentState()
-                    })
-                }
-
-                // Also store content when clicking participant items in context menu
-                // Use event delegation on the form to handle dynamic menu items
-                form.addEventListener("click", (e) => {
-                    const participantBtn = e.target.closest('[phx-click="add_participant_context"]')
-                    if (participantBtn) {
-                        this._storeContentState()
-                    }
-                })
-            }
+            // Setup form listeners for content storage and submission
+            setupFormListeners(this.el, this._getTextContent, this.state, (clearHidden) => {
+                clearInput(this.el, this.state, clearHidden)
+            })
         } else {
             // Fallback for textarea
             this.el.addEventListener("input", (e) => {
                 const text = e.target.value
                 const cursorPos = e.target.selectionStart
-
-                // Find @ symbol before cursor
                 const textBeforeCursor = text.substring(0, cursorPos)
                 const atMatch = textBeforeCursor.match(/@(\w*)$/)
 
@@ -528,330 +410,60 @@ Hooks.MentionInput = {
         // Handle mention insertion from server
         this.handleEvent("insert_mention", ({ name }) => {
             if (this.isContentEditable) {
-                this._insertMentionPill(name)
+                // Simplified: if we have stored content, restore it first, then append mention at end
+                if (this.state.storedContent) {
+                    restoreContent(this.el, this.state.storedContent)
+                    this.state.mentions = rebuildMentionsFromDOM(this.el)
+                    
+                    // Insert mention at end
+                    requestAnimationFrame(() => {
+                        this.state.mentions = insertPillAtEnd(this.el, name)
+                        hideMenu()
+                        this.state.isMenuVisible = false
+                        this.state.storedContent = null
+                        this.state.isInserting = false
+                    })
+                } else {
+                    // Insert at current cursor position
+                    this.state.mentions = insertPillAtCursor(this.el, name, this.state.atSymbolIndex)
+                    hideMenu()
+                    this.state.isMenuVisible = false
+                }
             } else {
                 this._insertMentionPlainText(name)
             }
         })
     },
 
-    _handleInput(e) {
-        const text = this._getTextContent()
-        const cursorPos = this._getCaretPosition()
-
-        // Find @ symbol before cursor - trigger for @ alone (show all) or @ plus letters (filter)
-        const textBeforeCursor = text.substring(0, cursorPos)
-        const atMatch = textBeforeCursor.match(/@(\w*)$/)
-
-        if (atMatch && !this._isCursorInMention()) {
-            this.atSymbolIndex = cursorPos - atMatch[0].length
-            this.currentFilter = atMatch[1]
-            this.selectedIndex = 0
-            this.isMenuVisible = true
-
-            // Show menu using client-side filtering (no server round-trip)
-            this._showMentionMenuClient(atMatch[1])
-        } else {
-            this._hideMentionMenu()
-        }
-
-        // Don't call cleanup on every input - it interferes with normal typing
-        // Cleanup is only called when pills are removed or when explicitly needed
-    },
-
-    _getParticipants() {
-        // Read current list from form (LiveView updates data-participants when chat opens)
+    _submitForm() {
+        const hiddenInput = document.getElementById("chat-popup-message-input")
         const form = this.el.closest("form")
-        if (!form || !form.dataset.participants) return []
-        try {
-            return JSON.parse(form.dataset.participants)
-        } catch (_) {
-            return []
+        
+        if (!hiddenInput || !form) return
+        
+        // Sync content to hidden input
+        syncContentToHiddenInput(this.el, hiddenInput)
+        
+        // Submit form if not already submitting
+        if (!form.hasAttribute("data-submitting")) {
+            form.setAttribute("data-submitting", "true")
+            form.requestSubmit()
+            
+            // Clear input after submission
+            clearInput(this.el, this.state, true)
+            
+            setTimeout(() => {
+                form.removeAttribute("data-submitting")
+            }, 1000)
         }
     },
 
-    _showMentionMenuClient(filter) {
-        const participants = this._getParticipants()
-        const filterLower = (filter || "").toLowerCase()
-        const filtered = participants.filter(p =>
-            (p.name || "").toLowerCase().includes(filterLower)
-        )
-
-        if (filtered.length === 0) {
-            this._hideMentionMenu()
-            return
-        }
-
-        // Create or update dropdown (append to body for correct fixed positioning)
-        let dropdown = document.getElementById("mention-dropdown")
-        if (!dropdown) {
-            dropdown = document.createElement("div")
-            dropdown.id = "mention-dropdown"
-            dropdown.className = "mention-dropdown fixed w-56 bg-card border border-border rounded-lg shadow-lg z-[100] max-h-48 overflow-y-auto"
-            document.body.appendChild(dropdown)
-        }
-
-        // Update dropdown content
-        dropdown.innerHTML = `
-          <div class="p-2 text-xs font-medium text-muted-foreground border-b border-border">
-            Select Participant
-          </div>
-          ${filtered.map((p, index) => `
-            <button
-              type="button"
-              class="mention-dropdown-item w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 cursor-pointer"
-              data-index="${index}"
-              data-name="${p.name}"
-              data-selected="${index === 0 ? 'true' : 'false'}"
-            >
-              <span class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                ${p.name.charAt(0)}
-              </span>
-              <span class="truncate">${p.name}</span>
-            </button>
-          `).join('')}
-        `
-
-        // Add click handlers to dropdown items
-        dropdown.querySelectorAll(".mention-dropdown-item").forEach(item => {
-          item.addEventListener("click", () => {
-            const name = item.getAttribute("data-name")
-            this._insertMentionPill(name)
-          })
-        })
-
-        dropdown.style.display = "block"
-        this._positionDropdown()
-    },
-
-    _handleKeydown(e) {
-        // When mention menu is visible, handle navigation keys
-        if (this.isMenuVisible) {
-            // Prevent form submission with Enter when menu is visible
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                e.stopPropagation()
-            }
-
-            const dropdown = document.getElementById("mention-dropdown")
-            if (!dropdown) return
-
-            const items = dropdown.querySelectorAll(".mention-dropdown-item")
-
-            switch (e.key) {
-                case "ArrowDown":
-                    e.preventDefault()
-                    this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1)
-                    this._updateSelectedIndex(items)
-                    return
-                case "ArrowUp":
-                    e.preventDefault()
-                    this.selectedIndex = Math.max(this.selectedIndex - 1, 0)
-                    this._updateSelectedIndex(items)
-                    return
-                case "Enter":
-                case "Tab":
-                    e.preventDefault()
-                    const selectedItem = items[this.selectedIndex]
-                    if (selectedItem) {
-                        const name = selectedItem.getAttribute("data-name")
-                        this._insertMentionPill(name)
-                    }
-                    return
-                case "Escape":
-                    e.preventDefault()
-                    this._hideMentionMenu()
-                    return
-            }
-            return
-        }
-
-        // Handle Shift+Enter for new lines
-        if (e.key === "Enter" && e.shiftKey) {
-            // Insert <br> for line break in contenteditable
-            e.preventDefault()
-            const selection = window.getSelection()
-            if (selection.rangeCount) {
-                const range = selection.getRangeAt(0)
-                const br = document.createElement("br")
-                range.insertNode(br)
-
-                // Add another <br> after if at end of container to ensure line break is visible
-                // This is needed because a single trailing <br> may not render in some browsers
-                const nextNode = br.nextSibling
-                if (!nextNode || (nextNode.nodeType === Node.TEXT_NODE && nextNode.textContent === "")) {
-                    const extraBr = document.createElement("br")
-                    br.parentNode.insertBefore(extraBr, br.nextSibling)
-                    // Move cursor after the first <br> (between the two <br> elements)
-                    range.setStartAfter(br)
-                    range.setEndBefore(extraBr)
-                } else {
-                    // Move cursor after the <br>
-                    range.setStartAfter(br)
-                    range.collapse(true)
-                }
-                selection.removeAllRanges()
-                selection.addRange(range)
-            }
-            return
-        }
-
-        // Handle Enter (without shift) to submit form if message is not empty
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault()
-            e.stopPropagation()
-            
-            // Check if message has content
-            const text = this._getTextContent().trim()
-            if (!text) {
-                // Empty message, do nothing
-                return
-            }
-            
-            // Sync content to hidden input and submit form
-            const hiddenInput = document.getElementById("chat-popup-message-input")
-            if (hiddenInput) {
-                // Use the same recursive traversal logic
-                const traverse = (node) => {
-                    if (node.nodeType === Node.TEXT_NODE) return node.textContent
-                    if (node.classList?.contains("mention-pill")) return "@" + (node.dataset.mention || "")
-                    let s = ""
-                    for (const child of node.childNodes) s += traverse(child)
-                    return s
-                }
-                const extractedText = traverse(this.el).trim()
-                if (extractedText) {
-                    hiddenInput.value = extractedText
-                } else {
-                    hiddenInput.value = ""
-                }
-            }
-            
-            // Check if form is already submitting (prevent duplicate submissions)
-            const form = this.el.closest("form")
-            if (form && !form.hasAttribute("data-submitting")) {
-                form.setAttribute("data-submitting", "true")
-                form.requestSubmit()
-                // Remove the flag after a short delay to allow re-submission if needed
-                setTimeout(() => {
-                    form.removeAttribute("data-submitting")
-                }, 1000)
-            }
-            return
-        }
-
-        // When menu is not visible, handle backspace to delete mention pills
-        if (e.key === "Backspace") {
-            this._handleBackspace(e)
-        }
-    },
 
     _insertMentionPill(name) {
-        const cursorPos = this._getCaretPosition()
-        let startIndex = this.atSymbolIndex
-        if (startIndex === -1) startIndex = cursorPos
-
-        const pill = this._createPillElement(name)
-        const range = document.createRange()
-        const sel = window.getSelection()
-
-        // Ensure contenteditable is clean before inserting
-        this._cleanupEmptyNodes()
-
-        if (startIndex === cursorPos) {
-            // From "Add context": insert at cursor (collapsed range)
-            const start = this._getNodeAndOffsetAtPosition(startIndex)
-            if (!start) return
-            range.setStart(start.node, start.offset)
-            range.collapse(true)
-        } else {
-            // From @ trigger: replace from @ to caret
-            const start = this._getNodeAndOffsetAtPosition(startIndex)
-            const end = this._getNodeAndOffsetAtPosition(cursorPos)
-            if (!start || !end) return
-            range.setStart(start.node, start.offset)
-            range.setEnd(end.node, end.offset)
-        }
-
-        range.deleteContents()
-
-        // Insert pill
-        range.insertNode(pill)
-
-        // Create new range for cursor positioning after pill
-        const newRange = document.createRange()
-        newRange.setStartAfter(pill)
-        newRange.collapse(true)
-
-        sel.removeAllRanges()
-        sel.addRange(newRange)
-
-        this.mentions.push({ name, index: this.mentions.length })
-        this.el.dataset.mentions = this.mentions.map(m => m.name).join(",")
-        this._hideMentionMenu()
-        this.el.focus()
-    },
-
-    _getNodeAndOffsetAtPosition(pos) {
-        let charCount = 0
-        let result = null
-        const traverse = (node) => {
-            if (result) return
-            if (node.nodeType === Node.TEXT_NODE) {
-                const nextCount = charCount + node.length
-                if (pos <= nextCount) {
-                    result = { node, offset: pos - charCount }
-                }
-                charCount = nextCount
-            } else if (node.classList && node.classList.contains("mention-pill")) {
-                const len = 1 + (node.dataset.mention || "").length
-                const nextCount = charCount + len
-                if (pos <= nextCount) {
-                    const parent = node.parentNode
-                    const index = Array.from(parent.childNodes).indexOf(node)
-                    result = { node: parent, offset: pos <= charCount ? index : index + 1 }
-                }
-                charCount = nextCount
-            } else {
-                for (const child of node.childNodes) {
-                    traverse(child)
-                    if (result) return
-                }
-            }
-        }
-        traverse(this.el)
-        if (!result) {
-            const last = this.el.lastChild
-            if (last) {
-                if (last.nodeType === Node.TEXT_NODE) result = { node: last, offset: last.length }
-                else result = { node: this.el, offset: this.el.childNodes.length }
-            } else {
-                result = { node: this.el, offset: 0 }
-            }
-        }
-        return result
-    },
-
-    _createPillElement(name) {
-        // Trim whitespace to avoid display issues
-        const trimmedName = name.trim()
-
-        const wrapper = document.createElement("span")
-        wrapper.className = "mention-pill"
-        wrapper.contentEditable = "false"
-        wrapper.dataset.mention = trimmedName
-
-        const avatar = document.createElement("span")
-        avatar.className = "mention-pill-avatar"
-        avatar.textContent = trimmedName.charAt(0).toUpperCase()
-
-        const nameSpan = document.createElement("span")
-        nameSpan.textContent = trimmedName
-
-        wrapper.appendChild(avatar)
-        wrapper.appendChild(nameSpan)
-
-        return wrapper
+        this.state.mentions = insertPillAtCursor(this.el, name, this.state.atSymbolIndex)
+        hideMenu()
+        this.state.isMenuVisible = false
+        this.state.atSymbolIndex = -1
     },
 
     _insertMentionPlainText(name) {
@@ -878,290 +490,6 @@ Hooks.MentionInput = {
         this.el.value = newValue
         this.el.setSelectionRange(newPos, newPos)
         this.el.focus()
-    },
-
-    _getPositionAfterNode(node) {
-        if (!node.parentNode) return null
-        const parent = node.parentNode
-        const next = node.nextSibling
-        if (next) return { node: next, offset: 0 }
-        const idx = Array.from(parent.childNodes).indexOf(node)
-        return { node: parent, offset: idx + 1 }
-    },
-
-    _getPositionBeforeNode(node) {
-        if (!node.parentNode) return null
-        const parent = node.parentNode
-        const prev = node.previousSibling
-        if (prev) {
-            if (prev.nodeType === Node.TEXT_NODE) return { node: prev, offset: prev.length }
-            return { node: parent, offset: Array.from(parent.childNodes).indexOf(node) }
-        }
-        return { node: parent, offset: Array.from(parent.childNodes).indexOf(node) }
-    },
-
-    _cursorIsAfterNode(node) {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return false
-        const range = selection.getRangeAt(0)
-        if (!range.collapsed) return false
-        const after = this._getPositionAfterNode(node)
-        if (!after) return false
-        return range.startContainer === after.node && range.startOffset === after.offset
-    },
-
-    _cursorIsBeforeNode(node) {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return false
-        const range = selection.getRangeAt(0)
-        if (!range.collapsed) return false
-        const before = this._getPositionBeforeNode(node)
-        if (!before) return false
-        return range.startContainer === before.node && range.startOffset === before.offset
-    },
-
-    _handleBackspace(e) {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return
-        const range = selection.getRangeAt(0)
-        if (!this.el.contains(range.startContainer)) return
-
-        const pills = this.el.querySelectorAll(".mention-pill")
-        for (const pill of pills) {
-            if (this._cursorIsAfterNode(pill) || this._cursorIsBeforeNode(pill)) {
-                e.preventDefault()
-                const name = pill.dataset.mention
-                // Remove trailing space if it exists (inserted with pill)
-                const nextSibling = pill.nextSibling
-                if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && nextSibling.textContent.trim() === "") {
-                    nextSibling.remove()
-                }
-                pill.remove()
-                this.mentions = this.mentions.filter(m => m.name !== name)
-                this.el.dataset.mentions = this.mentions.map(m => m.name).join(",")
-                this._cleanupEmptyNodes()
-                this._ensureValidCursor()
-                return
-            }
-        }
-
-        const nodeBefore = this._getNodeImmediatelyBeforeCursor()
-        if (nodeBefore?.classList?.contains("mention-pill")) {
-            e.preventDefault()
-            const name = nodeBefore.dataset.mention
-            // Remove trailing space if it exists (inserted with pill)
-            const nextSibling = nodeBefore.nextSibling
-            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && nextSibling.textContent.trim() === "") {
-                nextSibling.remove()
-            }
-            nodeBefore.remove()
-            this.mentions = this.mentions.filter(m => m.name !== name)
-            this.el.dataset.mentions = this.mentions.map(m => m.name).join(",")
-            this._cleanupEmptyNodes()
-            this._ensureValidCursor()
-        }
-    },
-
-    _getNodeImmediatelyBeforeCursor() {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return null
-        const range = selection.getRangeAt(0)
-        if (!range.collapsed || !this.el.contains(range.startContainer)) return null
-
-        const sc = range.startContainer
-        const so = range.startOffset
-
-        if (sc.nodeType === Node.TEXT_NODE) {
-            if (so === 0) {
-                let prev = sc.previousSibling
-                while (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.trim() === "") prev = prev.previousSibling
-                if (prev?.classList?.contains("mention-pill")) return prev
-                if (prev?.nodeType === Node.ELEMENT_NODE) return prev.querySelector(".mention-pill") || null
-                return null
-            }
-            // Handle case where cursor is inside text node with offset > 0
-            // If the text before cursor is only whitespace, check if previous sibling is a pill
-            const textBeforeCursor = sc.textContent.slice(0, so)
-            if (/^\s*$/.test(textBeforeCursor)) {
-                let prev = sc.previousSibling
-                while (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.trim() === "") prev = prev.previousSibling
-                if (prev?.classList?.contains("mention-pill")) return prev
-            }
-            return null
-        }
-
-        if (sc.nodeType === Node.ELEMENT_NODE && so > 0) {
-            const prev = sc.childNodes[so - 1]
-            if (prev?.classList?.contains("mention-pill")) return prev
-            if (prev?.nodeType === Node.ELEMENT_NODE) {
-                const last = prev.querySelector(".mention-pill")
-                if (last) return last
-                const walk = (n) => {
-                    if (!n.childNodes.length) return n
-                    const l = n.childNodes[n.childNodes.length - 1]
-                    return l.nodeType === Node.ELEMENT_NODE ? walk(l) : l.previousSibling || l
-                }
-                const deep = walk(prev)
-                return deep?.classList?.contains("mention-pill") ? deep : prev.querySelector(".mention-pill")
-            }
-        }
-        return null
-    },
-
-    _waitForDropdownThenPosition() {
-        // Wait for next tick for dropdown to appear
-        setTimeout(() => {
-            this._positionDropdown()
-        }, 10)
-    },
-
-    _positionDropdown() {
-        const dropdown = document.getElementById("mention-dropdown")
-        if (!dropdown) return
-
-        const coords = this._getCaretCoordinates()
-        const gap = 8
-        const dropdownRect = dropdown.getBoundingClientRect()
-        const dropdownHeight = Math.min(dropdownRect.height || 192, 192)
-        const dropdownWidth = dropdownRect.width || 224
-        const spaceBelow = window.innerHeight - coords.bottom
-        const spaceAbove = coords.top
-
-        // Viewport positioning: prefer below, flip above when not enough space
-        if (spaceBelow < dropdownHeight + gap && spaceAbove > dropdownHeight + gap) {
-            dropdown.style.top = "auto"
-            dropdown.style.bottom = `${window.innerHeight - coords.top + gap}px`
-        } else {
-            dropdown.style.top = `${coords.bottom + gap}px`
-            dropdown.style.bottom = "auto"
-        }
-
-        // Horizontal: align to caret, clamp to viewport
-        let left = coords.left
-        if (left + dropdownWidth > window.innerWidth - gap) left = window.innerWidth - dropdownWidth - gap
-        if (left < gap) left = gap
-        dropdown.style.left = `${left}px`
-    },
-
-    _updateSelectedIndex(items) {
-        items.forEach((item, index) => {
-            item.dataset.selected = index === this.selectedIndex ? "true" : "false"
-        })
-
-        // Scroll selected item into view
-        const selected = items[this.selectedIndex]
-        if (selected) {
-            selected.scrollIntoView({ block: "nearest" })
-        }
-    },
-
-    _hideMentionMenu() {
-        this.isMenuVisible = false
-        this.selectedIndex = 0
-        this.atSymbolIndex = -1
-
-        // Hide client-side dropdown
-        const dropdown = document.getElementById("mention-dropdown")
-        if (dropdown) {
-            dropdown.style.display = "none"
-        }
-
-        // Also notify server for consistency
-        this.pushEventTo(this.phxTarget, "hide_mention_menu", {})
-    },
-
-    _getCaretPosition() {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return 0
-
-        const range = selection.getRangeAt(0)
-        const preCaretRange = range.cloneRange()
-        preCaretRange.selectNodeContents(this.el)
-        preCaretRange.setEnd(range.endContainer, range.endOffset)
-        return preCaretRange.toString().length
-    },
-
-    _setCaretPosition(pos) {
-        const range = document.createRange()
-        const selection = window.getSelection()
-
-        let charCount = 0
-        let found = false
-
-        const traverse = (node) => {
-            if (found) return
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                const nextCount = charCount + node.length
-                if (pos <= nextCount) {
-                    range.setStart(node, pos - charCount)
-                    range.collapse(true)
-                    found = true
-                }
-                charCount = nextCount
-            } else {
-                for (const child of node.childNodes) {
-                    traverse(child)
-                    if (found) return
-                }
-            }
-        }
-
-        traverse(this.el)
-
-        if (!found) {
-            range.selectNodeContents(this.el)
-            range.collapse(false)
-        }
-
-        selection.removeAllRanges()
-        selection.addRange(range)
-    },
-
-    _getCaretCoordinates() {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return { left: 0, top: 0, bottom: 0 }
-
-        const range = selection.getRangeAt(0)
-        const rects = range.getClientRects()
-
-        if (rects.length > 0) {
-            const rect = rects[0]
-            return { left: rect.left, top: rect.top, bottom: rect.bottom }
-        }
-
-        // Fallback: use first rect
-        const rect = range.getBoundingClientRect()
-        return { left: rect.left, top: rect.top, bottom: rect.bottom }
-    },
-
-    _getTextContent() {
-        // Get plain text from contenteditable (including nested divs/p), replacing pills with @name
-        const traverse = (node) => {
-            if (node.nodeType === Node.TEXT_NODE) return node.textContent
-            if (node.classList?.contains("mention-pill")) return "@" + (node.dataset.mention || "")
-            let s = ""
-            for (const child of node.childNodes) s += traverse(child)
-            return s
-        }
-        return traverse(this.el)
-    },
-
-    _isCursorInMention() {
-        const selection = window.getSelection()
-        if (!selection.rangeCount) return false
-
-        const range = selection.getRangeAt(0)
-        let node = range.startContainer
-
-        // Check if cursor is within or after a mention pill
-        while (node && node !== this.el) {
-            if (node.classList?.contains("mention-pill")) {
-                return true
-            }
-            node = node.parentNode
-        }
-        return false
     }
 }
 
@@ -1171,62 +499,20 @@ Hooks.MentionSync = {
         const form = this.el.closest("form")
         if (!form) return
 
-        this._syncContent = () => {
-            const textarea = document.getElementById("chat-popup-textarea")
-            if (!textarea) return
-
-            // Extract text with @mentions using recursive traversal
-            const traverse = (node) => {
-                if (node.nodeType === Node.TEXT_NODE) return node.textContent
-                if (node.classList?.contains("mention-pill")) return "@" + (node.dataset.mention || "")
-                let s = ""
-                for (const child of node.childNodes) s += traverse(child)
-                return s
-            }
-            
-            const text = traverse(textarea).trim()
-            
-            // Only sync if there's actual content (not empty or whitespace-only)
-            if (text) {
-                this.el.value = text
-            } else {
-                this.el.value = ""
-            }
-        }
+        const textarea = document.getElementById("chat-popup-textarea")
+        if (!textarea) return
 
         // Sync on form submit
         form.addEventListener("submit", (e) => {
-            // Prevent duplicate submissions
-            if (form.hasAttribute("data-submitting")) {
+            if (!handleFormSubmit(this.el, textarea, form)) {
                 e.preventDefault()
-                return false
             }
-            
-            // Sync content before submit
-            this._syncContent()
-            
-            // Check if message is empty after syncing
-            if (!this.el.value || !this.el.value.trim()) {
-                e.preventDefault()
-                return false
-            }
-            
-            // Mark form as submitting
-            form.setAttribute("data-submitting", "true")
-            
-            // Remove the flag after a delay to allow re-submission if needed
-            setTimeout(() => {
-                form.removeAttribute("data-submitting")
-            }, 1000)
         })
 
         // Also sync on input to keep hidden input updated
-        const textarea = document.getElementById("chat-popup-textarea")
-        if (textarea) {
-            textarea.addEventListener("input", () => {
-                this._syncContent()
-            })
-        }
+        textarea.addEventListener("input", () => {
+            syncContentToHiddenInput(textarea, this.el)
+        })
     }
 }
 

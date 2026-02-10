@@ -11,13 +11,13 @@ defmodule SocialScribeWeb.UI.DateTime do
 
   ## Formats
 
-  - `datetime` (default) - Full date and time: "Feb 9, 2026, 3:30 PM"
-  - `date` - Date only: "Feb 9, 2026"
-  - `time` - Time only: "3:30 PM"
-  - `relative` - Relative format: "Today at 3:30 PM", "Yesterday at 2:30 PM", "Feb 9 at 1:00 PM"
+  - `datetime` (default) - Full date and time: "11:17am - November 13, 2025"
+  - `date` - Date only: "November 3, 2025"
+  - `time` - Time only: "11:17am"
+  - `relative` - Relative format: "Today at 11:17am", "Yesterday at 2:30pm", "November 9 at 1:00pm"
   - `short` - Short date: "02/09/2026"
   - `medium` - Medium date: "Feb 9, 2026"
-  - `long` - Long date: "February 9, 2026"
+  - `long` - Long date: "November 3, 2025"
   """
   use Phoenix.Component
 

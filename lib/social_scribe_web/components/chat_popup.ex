@@ -269,32 +269,53 @@ defmodule SocialScribeWeb.ChatPopup do
 
   @impl true
   def handle_event("toggle_context_menu", _params, socket) do
-    {:noreply, MentionHandler.toggle_context_menu(socket)}
+    {:noreply, assign(socket, :show_context_menu, !socket.assigns.show_context_menu)}
   end
 
   @impl true
   def handle_event("close_context_menu", _params, socket) do
-    {:noreply, MentionHandler.close_context_menu(socket)}
+    {:noreply, assign(socket, :show_context_menu, false)}
   end
 
   @impl true
   def handle_event("add_participant_context", %{"name" => name}, socket) do
-    {:noreply, MentionHandler.add_participant_context(socket, name)}
+    socket =
+      socket
+      |> assign(:show_context_menu, false)
+      |> push_event("insert_mention", %{name: name})
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("show_mention_menu", %{"filter" => filter}, socket) do
-    {:noreply, MentionHandler.show_mention_menu(socket, filter)}
+    socket =
+      socket
+      |> assign(:show_mention_menu, true)
+      |> assign(:mention_filter, filter)
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("hide_mention_menu", _params, socket) do
-    {:noreply, MentionHandler.hide_mention_menu(socket)}
+    socket =
+      socket
+      |> assign(:show_mention_menu, false)
+      |> assign(:mention_filter, "")
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("select_mention", %{"name" => name}, socket) do
-    {:noreply, MentionHandler.select_mention(socket, name)}
+    socket =
+      socket
+      |> assign(:show_mention_menu, false)
+      |> assign(:mention_filter, "")
+      |> push_event("insert_mention", %{name: name})
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -507,7 +528,8 @@ defmodule SocialScribeWeb.ChatPopup do
                     data-placeholder="Ask anything about your meetings"
                     phx-hook="MentionInput"
                     phx-target={@myself}
-                    class="mention-input min-h-[72px] max-h-32 overflow-y-auto w-full px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-500 focus:ring-0 scrollbar-thin"
+                    phx-update="ignore"
+                    class="mention-input min-h-[72px] max-h-32 overflow-y-auto w-full px-4 py-2 text-sm text-gray-900 placeholder:text-gray-200 bg-transparent border-0 resize-none dark:text-gray-100 dark:placeholder:text-gray-400 focus:ring-0 scrollbar-thin"
                     data-mentions={Enum.map_join(@mentions || [], ",", & &1.name)}
                   ></div>
                   <input
@@ -522,7 +544,7 @@ defmodule SocialScribeWeb.ChatPopup do
                     <button
                       type="submit"
                       disabled={@loading}
-                      class="flex items-center justify-center transition-all rounded-full cursor-pointer w-7 h-7 bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center transition-all rounded-lg cursor-pointer w-7 h-7 bg-slate-600/10 hover:bg-slate-600/20 text-primary disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Send"
                     >
                       <svg

@@ -36,7 +36,7 @@ defmodule SocialScribeWeb.UI.Button do
   @sizes ["default", "xs", "sm", "lg", "icon"]
 
   attr :type, :string, default: "button"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :variant, :string, values: @variants, default: "default"
   attr :size, :string, values: @sizes, default: "default"
   attr :disabled, :boolean, default: false
@@ -46,6 +46,20 @@ defmodule SocialScribeWeb.UI.Button do
   slot :inner_block, required: true
 
   def button(assigns) do
+    class =
+      case assigns.class do
+        nil ->
+          nil
+
+        list when is_list(list) ->
+          list |> List.flatten() |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+
+        str ->
+          str
+      end
+
+    assigns = assign(assigns, :computed_class, class)
+
     ~H"""
     <button
       type={@type}
@@ -55,7 +69,7 @@ defmodule SocialScribeWeb.UI.Button do
         variant_classes(@variant),
         size_classes(@size),
         @loading && "cursor-wait",
-        @class
+        @computed_class
       ]}
       {@rest}
     >
@@ -137,7 +151,7 @@ defmodule SocialScribeWeb.UI.Button do
       </.icon_button>
   """
   attr :type, :string, default: "button"
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :variant, :string, values: @variants, default: "default"
   attr :size, :string, values: ["default", "xs", "sm", "lg", "icon"], default: "default"
   attr :disabled, :boolean, default: false
@@ -147,6 +161,20 @@ defmodule SocialScribeWeb.UI.Button do
   slot :inner_block, required: true
 
   def icon_button(assigns) do
+    class =
+      case assigns.class do
+        nil ->
+          nil
+
+        list when is_list(list) ->
+          list |> List.flatten() |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+
+        str ->
+          str
+      end
+
+    assigns = assign(assigns, :computed_class, class)
+
     ~H"""
     <button
       type={@type}
@@ -156,7 +184,7 @@ defmodule SocialScribeWeb.UI.Button do
         variant_classes(@variant),
         icon_size_classes(@size),
         @loading && "cursor-wait",
-        @class
+        @computed_class
       ]}
       {@rest}
     >
@@ -174,4 +202,46 @@ defmodule SocialScribeWeb.UI.Button do
   defp icon_size_classes("lg"), do: "h-11 w-11"
   defp icon_size_classes("xs"), do: "h-8 w-8"
   defp icon_size_classes("icon"), do: "h-10 w-10"
+
+  # ============================================================================
+  # BUTTON GROUP
+  # ============================================================================
+
+  @doc """
+  Button group container for grouping related buttons together.
+  Inspired by shadcn/ui button group pattern.
+
+  ## Examples
+
+      <.button_group>
+        <.button>First</.button>
+        <.button>Second</.button>
+        <.button>Third</.button>
+      </.button_group>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  slot :inner_block, required: true
+
+  def button_group(assigns) do
+    ~H"""
+    <div
+      class={[
+        "inline-flex items-center rounded-md border border-border shadow-sm",
+        "[&>*:first-child]:rounded-r-none [&>*:first-child]:rounded-tr-none [&>*:first-child]:rounded-br-none [&>*:first-child]:border-r-0",
+        "[&>*:not(:first-child):not(:last-child)]:rounded-none [&>*:not(:first-child):not(:last-child)]:border-l [&>*:not(:first-child):not(:last-child)]:border-l-border/50 [&>*:not(:first-child):not(:last-child)]:border-r-0",
+        "[&>*:last-child]:rounded-l-none [&>*:last-child]:rounded-tl-none [&>*:last-child]:rounded-bl-none [&>*:last-child]:border-l [&>*:last-child]:border-l-border/50 [&>*:last-child]:border-r-0",
+        "[&>*]:relative [&>*:z-10]",
+        "[&>*:hover]:z-20 [&>*:focus]:z-20",
+        "[&>*]:shadow-none [&>*]:border-t-0 [&>*]:border-b-0",
+        "[&>*:not(:first-child)]:-ml-px",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
 end

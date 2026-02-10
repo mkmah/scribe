@@ -474,4 +474,16 @@ defmodule SocialScribe.Meetings do
   def generate_prompt_for_meeting(%Meeting{} = meeting) do
     PromptBuilder.generate_prompt_for_meeting(meeting)
   end
+
+  @doc """
+  Clears CRM provider association for all meetings when a user's CRM credential is removed.
+  Called automatically when CRM credentials are deleted.
+  """
+  def clear_crm_provider_for_user(user_id, provider) do
+    from(m in Meeting,
+      join: ce in assoc(m, :calendar_event),
+      where: ce.user_id == ^user_id and m.crm_provider == ^provider
+    )
+    |> Repo.update_all(set: [crm_provider: nil])
+  end
 end

@@ -21,10 +21,11 @@ defmodule SocialScribeWeb.CrmModalTest do
     } do
       _cred = hubspot_credential_fixture(%{user_id: user.id})
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # When no CRM is associated, shows "Use HubSpot" button
-      assert has_element?(view, "button", "Use HubSpot")
+      # When no CRM is associated, shows "Select CRM" button with dropdown menu containing HubSpot
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
     end
 
     test "shows Salesforce card when salesforce credential exists", %{
@@ -34,10 +35,11 @@ defmodule SocialScribeWeb.CrmModalTest do
     } do
       _cred = salesforce_credential_fixture(%{user_id: user.id})
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # When no CRM is associated, shows "Use Salesforce" button
-      assert has_element?(view, "button", "Use Salesforce")
+      # When no CRM is associated, shows "Select CRM" button with dropdown menu containing Salesforce
+      assert html =~ "Select CRM"
+      assert html =~ "Salesforce"
     end
 
     test "shows both cards when both credentials exist", %{
@@ -48,20 +50,21 @@ defmodule SocialScribeWeb.CrmModalTest do
       _hubspot = hubspot_credential_fixture(%{user_id: user.id})
       _salesforce = salesforce_credential_fixture(%{user_id: user.id})
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # When no CRM is associated, shows "Use" buttons
-      assert has_element?(view, "button", "Use HubSpot")
-      assert has_element?(view, "button", "Use Salesforce")
+      # When no CRM is associated, shows "Select CRM" button with dropdown menu containing both CRMs
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
     end
 
     test "shows no CRM cards when no credentials exist", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      refute has_element?(view, "button", "Use HubSpot")
-      refute has_element?(view, "button", "Use Salesforce")
-      refute has_element?(view, "button", "Update HubSpot")
-      refute has_element?(view, "button", "Update Salesforce")
+      # Should not show CRM section when no credentials exist
+      refute html =~ "Select CRM"
+      refute html =~ "Update HubSpot"
+      refute html =~ "Update Salesforce"
     end
   end
 
@@ -75,21 +78,21 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "renders modal with 'Update HubSpot' title", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/hubspot")
 
       assert has_element?(view, "h2", "Update HubSpot")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/hubspot")
 
       # The modal should have a search/contact select UI
-      assert has_element?(view, "[phx-change=contact_search]") or
-               has_element?(view, "input")
+      assert has_element?(view, "[phx-keyup=contact_search]") or
+               has_element?(view, "input[id*='contact-select-input']")
     end
 
     test "modal can be closed by navigating back", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/hubspot")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/hubspot")
 
       # Modal should be visible
       assert has_element?(view, "h2", "Update HubSpot")
@@ -106,16 +109,16 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "renders modal with 'Update in Salesforce' title", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/salesforce")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/salesforce")
 
       assert has_element?(view, "h2", "Update Salesforce")
     end
 
     test "shows contact search input", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}/crm/salesforce")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}/crm/salesforce")
 
-      assert has_element?(view, "[phx-change=contact_search]") or
-               has_element?(view, "input")
+      assert has_element?(view, "[phx-keyup=contact_search]") or
+               has_element?(view, "input[id*='contact-select-input']")
     end
   end
 
@@ -128,20 +131,22 @@ defmodule SocialScribeWeb.CrmModalTest do
     end
 
     test "does not show CRM section when no hubspot credential", %{conn: conn, meeting: meeting} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      refute has_element?(view, "button", "Use HubSpot")
-      refute has_element?(view, "button", "Update HubSpot")
+      # Should not show CRM section when no credentials exist
+      refute html =~ "Select CRM"
+      refute html =~ "Update HubSpot"
     end
 
     test "does not show CRM section when no salesforce credential", %{
       conn: conn,
       meeting: meeting
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting}")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      refute has_element?(view, "button", "Use Salesforce")
-      refute has_element?(view, "button", "Update Salesforce")
+      # Should not show CRM section when no credentials exist
+      refute html =~ "Select CRM"
+      refute html =~ "Update Salesforce"
     end
   end
 

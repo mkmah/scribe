@@ -17,9 +17,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Should show selection buttons for both CRMs
-      assert html =~ "Use HubSpot"
-      assert html =~ "Use Salesforce"
+      # Should show "Select CRM" button with dropdown menu containing both CRMs
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
       refute html =~ "Update HubSpot"
       refute html =~ "Update Salesforce"
     end
@@ -31,9 +32,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Should show Update button for associated CRM
+      # Should show Update button for associated CRM with dropdown menu button
       assert html =~ "Update HubSpot"
-      assert html =~ "Change CRM"
+      # Dropdown menu should be present (check for dropdown menu trigger)
+      assert html =~ "crm-selector-menu"
       refute html =~ "Update Salesforce"
     end
 
@@ -47,7 +49,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      assert html =~ "Change CRM"
+      # Dropdown menu button should be present to change CRM
+      assert html =~ "crm-selector-menu"
     end
 
     test "does not show Change CRM when only one CRM is connected", %{conn: conn, user: user} do
@@ -57,7 +60,9 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
       assert html =~ "Update HubSpot"
-      refute html =~ "Change CRM"
+      # Dropdown menu button should still be present (it's always shown when CRM is set)
+      # but only one option will be in the dropdown
+      assert html =~ "crm-selector-menu"
     end
 
     test "allows user to set CRM provider", %{conn: conn, user: user} do
@@ -67,13 +72,14 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Click to set HubSpot as provider
+      # Click to set HubSpot as provider via dropdown menu item
       html = render_click(view, "set_crm_provider", %{"provider" => "hubspot"})
 
       # Should update UI to show Update button
       assert html =~ "Update HubSpot"
-      assert html =~ "Change CRM"
-      refute html =~ "Use HubSpot"
+      # Dropdown menu button should be present
+      assert html =~ "crm-selector-menu"
+      refute html =~ "Select CRM"
 
       # Verify meeting was updated in database
       updated_meeting = SocialScribe.Meetings.get_meeting!(meeting.id)
@@ -87,19 +93,18 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Click Change CRM button
-      html = render_click(view, "show_crm_selector", %{})
+      # Dropdown menu should contain both CRM options
+      html = render(view)
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
 
-      # Should show selection buttons
-      assert html =~ "Use HubSpot"
-      assert html =~ "Use Salesforce"
-
-      # Select Salesforce
+      # Select Salesforce via dropdown menu item
       html = render_click(view, "set_crm_provider", %{"provider" => "salesforce"})
 
       # Should update to show Salesforce
       assert html =~ "Update Salesforce"
-      assert html =~ "Change CRM"
+      # Dropdown menu button should still be present
+      assert html =~ "crm-selector-menu"
 
       # Verify meeting was updated in database
       updated_meeting = SocialScribe.Meetings.get_meeting!(meeting.id)
@@ -139,8 +144,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       refute html =~ "Update HubSpot"
       refute html =~ "Update Salesforce"
-      refute html =~ "Use HubSpot"
-      refute html =~ "Use Salesforce"
+      refute html =~ "Select CRM"
+      refute html =~ "crm-selector-menu"
     end
 
     test "shows only connected CRM buttons in selection", %{conn: conn, user: user} do
@@ -157,9 +162,11 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       html = render(view)
 
-      # Should only show HubSpot option (as "Use HubSpot" when no provider is set)
-      assert html =~ "Use HubSpot"
-      refute html =~ "Use Salesforce"
+      # Should show "Select CRM" button with dropdown menu containing only HubSpot
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      # Check that Salesforce dropdown menu item is not present
+      refute html =~ ~s(phx-value-provider="salesforce")
     end
 
     test "handles invalid provider string gracefully", %{conn: conn, user: user} do
@@ -219,9 +226,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Should only show HubSpot (filtered by config)
-      assert html =~ "Use HubSpot"
-      refute html =~ "Use Salesforce"
+      # Should only show HubSpot (filtered by config) in dropdown menu
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      refute html =~ ~s(phx-value-provider="salesforce")
     end
 
     test "build_crm_credentials shows all CRMs when config is nil", %{conn: conn, user: user} do
@@ -236,9 +244,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Should show both CRMs
-      assert html =~ "Use HubSpot"
-      assert html =~ "Use Salesforce"
+      # Should show both CRMs in dropdown menu
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
     end
 
     test "build_crm_credentials shows all CRMs when config is Mock adapter", %{
@@ -260,9 +269,10 @@ defmodule SocialScribeWeb.MeetingLive.CrmAssociationTest do
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/meetings/#{meeting.id}")
 
-      # Should show all CRMs (Mock is not in known_adapters)
-      assert html =~ "Use HubSpot"
-      assert html =~ "Use Salesforce"
+      # Should show all CRMs (Mock is not in known_adapters) in dropdown menu
+      assert html =~ "Select CRM"
+      assert html =~ "HubSpot"
+      assert html =~ "Salesforce"
     end
   end
 

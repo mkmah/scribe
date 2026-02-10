@@ -77,31 +77,77 @@
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
-            <%= if @show_crm_selector do %>
-              <%!-- Show CRM selection when no CRM is associated or user wants to change --%>
-              <%= for option <- @crm_selection_options do %>
-                <.button
-                  phx-click="set_crm_provider"
-                  phx-value-provider={option.provider}
-                  class={option.button_class}
-                >
-                  Use {option.label}
-                </.button>
-              <% end %>
-            <% else %>
-              <%= for entry <- @crm_entries do %>
-                <%= if entry.provider == :change_crm do %>
-                  <.button phx-click="show_crm_selector" class={entry.button_class}>
-                    {entry.label}
-                  </.button>
-                <% else %>
-                  <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{entry.provider}"}>
-                    <.button class={entry.button_class}>
-                      Update {entry.label}
+            <%= if map_size(@crm_credentials) > 0 do %>
+              <%!-- Determine button text --%>
+              <% button_text =
+                if @current_crm,
+                  do: "Update #{Registry.provider_label(@current_crm)}",
+                  else: "Select CRM" %>
+
+              <%!-- Button group with main button and context menu --%>
+              <div class="relative inline-flex">
+                <.button_group>
+                  <%= if @current_crm do %>
+                    <%!-- Main button: Update CRM - opens CRM modal --%>
+                    <.link patch={~p"/dashboard/meetings/#{@meeting}/crm/#{@current_crm}"}>
+                      <.button class={[
+                        "border-0 rounded-r-none rounded-tr-none rounded-br-none",
+                        @crm_button_class
+                      ]}>
+                        {button_text}
+                      </.button>
+                    </.link>
+                  <% else %>
+                    <%!-- No CRM selected - show disabled button --%>
+                    <.button
+                      class={[
+                        "border-0 rounded-r-none rounded-tr-none rounded-br-none",
+                        @crm_button_class
+                      ]}
+                      disabled
+                    >
+                      {button_text}
                     </.button>
-                  </.link>
-                <% end %>
-              <% end %>
+                  <% end %>
+
+                  <%!-- Context menu button (ellipsis) --%>
+                  <.dropdown_menu align="end" id="crm-selector-menu">
+                    <.dropdown_menu_trigger dropdown_id="crm-selector-menu" as_child>
+                      <%= if @current_crm do %>
+                        <.button class={[
+                          "border-0 rounded-l-none rounded-tl-none rounded-bl-none",
+                          @crm_button_class
+                        ]}>
+                          <.more_horizontal class="w-4 h-4" />
+                        </.button>
+                      <% else %>
+                        <.button
+                          variant="default"
+                          class="border-0 rounded-l-none rounded-tl-none rounded-bl-none"
+                        >
+                          <.more_horizontal class="w-4 h-4" />
+                        </.button>
+                      <% end %>
+                    </.dropdown_menu_trigger>
+                    <.dropdown_menu_content>
+                      <%= for {provider, _credential} <- @crm_credentials do %>
+                        <.dropdown_menu_item
+                          phx-click="set_crm_provider"
+                          phx-value-provider={provider}
+                          class={if @current_crm == provider, do: "bg-accent"}
+                        >
+                          <%= if @current_crm == provider do %>
+                            <.check class="w-4 h-4 mr-0.5" />
+                          <% else %>
+                            <span class="w-4 h-4 mr-0.5"></span>
+                          <% end %>
+                          {Registry.provider_label(provider)}
+                        </.dropdown_menu_item>
+                      <% end %>
+                    </.dropdown_menu_content>
+                  </.dropdown_menu>
+                </.button_group>
+              </div>
             <% end %>
           </div>
         </div>

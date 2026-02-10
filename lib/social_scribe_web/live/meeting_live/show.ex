@@ -40,17 +40,21 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       else
         # Build CRM credentials map for all registered providers
         crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
-        crm_entries_to_display = get_crm_entries_to_display(crm_credentials, meeting)
 
-        # Build CRM selection options with labels
-        crm_selection_options =
-          Enum.map(crm_credentials, fn {provider, _credential} ->
-            %{
-              provider: provider,
-              label: Registry.provider_label(provider),
-              button_class: crm_button_class(provider)
-            }
-          end)
+        # Determine current CRM and button styling
+        current_crm =
+          if meeting.crm_provider && Map.has_key?(crm_credentials, meeting.crm_provider) do
+            meeting.crm_provider
+          else
+            nil
+          end
+
+        crm_button_class =
+          if current_crm do
+            crm_button_class(current_crm)
+          else
+            "bg-primary text-primary-foreground hover:bg-primary/90"
+          end
 
         socket =
           socket
@@ -59,14 +63,10 @@ defmodule SocialScribeWeb.MeetingLive.Show do
           |> assign(:automation_results, automation_results)
           |> assign(:user_has_automations, user_has_automations)
           |> assign(:crm_credentials, crm_credentials)
-          |> assign(:crm_entries, crm_entries_to_display)
-          |> assign(:crm_selection_options, crm_selection_options)
+          |> assign(:current_crm, current_crm)
+          |> assign(:crm_button_class, crm_button_class)
           |> assign(:crm_modal_provider, nil)
           |> assign(:crm_modal_provider_label, nil)
-          |> assign(
-            :show_crm_selector,
-            meeting.crm_provider == nil && map_size(crm_credentials) > 0
-          )
           |> assign(:regenerating, false)
           |> assign(
             :follow_up_email_form,
@@ -99,7 +99,15 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       case socket.assigns.live_action do
         :crm ->
           provider = params["provider"]
-          {provider, provider && Registry.provider_label(provider)}
+
+          # Check if credentials exist for this provider
+          if Map.has_key?(socket.assigns.crm_credentials, provider) do
+            {provider, provider && Registry.provider_label(provider)}
+          else
+            # Redirect if credentials don't exist
+            send(self(), {:redirect_to_meeting, socket.assigns.meeting.id})
+            {nil, nil}
+          end
 
         _ ->
           {nil, nil}
@@ -110,6 +118,48 @@ defmodule SocialScribeWeb.MeetingLive.Show do
       |> assign(:crm_modal_provider, crm_modal_provider)
       |> assign(:crm_modal_provider_label, crm_modal_provider_label)
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:redirect_to_meeting, meeting_id}, socket) do
+    socket =
+      socket
+      |> put_flash(
+        :warning,
+        "CRM connection not available. Please reconnect or select a different CRM."
+      )
+      |> push_patch(to: ~p"/dashboard/meetings/#{meeting_id}")
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:crm_search, _, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)
+
+  @impl true
+  def handle_info({:crm_generate_suggestions, _, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
+
+  @impl true
+  def handle_info({:crm_apply_updates, _, _, _, _} = msg, socket),
+    do: CrmHandlers.handle_info(msg, socket)
+
+  @impl true
+  def handle_info({:chat_response, conversation_id, result}, socket) do
+    # Forward chat response to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup,
+      id: "chat-popup",
+      chat_response: {conversation_id, result}
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:chat_error, conversation_id, error}, socket) do
+    # Forward chat error to ChatPopup component
+    send_update(SocialScribeWeb.ChatPopup, id: "chat-popup", chat_error: {conversation_id, error})
     {:noreply, socket}
   end
 
@@ -152,25 +202,19 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     try do
       case Meetings.update_meeting(meeting, %{crm_provider: provider}) do
         {:ok, updated_meeting} ->
-          # Refresh CRM entries
+          # Refresh CRM credentials
           crm_credentials = build_crm_credentials(socket.assigns.current_user.id)
-          crm_entries_to_display = get_crm_entries_to_display(crm_credentials, updated_meeting)
 
-          crm_selection_options =
-            Enum.map(crm_credentials, fn {p, _credential} ->
-              %{
-                provider: p,
-                label: Registry.provider_label(p),
-                button_class: crm_button_class(p)
-              }
-            end)
+          # Update current CRM and button styling
+          current_crm = provider
+          crm_button_class = crm_button_class(provider)
 
           socket =
             socket
             |> assign(:meeting, updated_meeting)
-            |> assign(:crm_entries, crm_entries_to_display)
-            |> assign(:crm_selection_options, crm_selection_options)
-            |> assign(:show_crm_selector, false)
+            |> assign(:crm_credentials, crm_credentials)
+            |> assign(:current_crm, current_crm)
+            |> assign(:crm_button_class, crm_button_class)
             |> put_flash(:success, "CRM provider set to #{Registry.provider_label(provider)}")
 
           {:noreply, socket}
@@ -192,43 +236,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
     end
   end
 
-  @impl true
-  def handle_event("show_crm_selector", _params, socket) do
-    socket = assign(socket, :show_crm_selector, true)
-    {:noreply, socket}
-  end
-
-  # === CRM Handlers (Delegated) ===
-
-  @impl true
-  def handle_info({:crm_search, _, _, _} = msg, socket), do: CrmHandlers.handle_info(msg, socket)
-
-  @impl true
-  def handle_info({:crm_generate_suggestions, _, _, _, _} = msg, socket),
-    do: CrmHandlers.handle_info(msg, socket)
-
-  @impl true
-  def handle_info({:crm_apply_updates, _, _, _, _} = msg, socket),
-    do: CrmHandlers.handle_info(msg, socket)
-
-  @impl true
-  def handle_info({:chat_response, conversation_id, result}, socket) do
-    # Forward chat response to ChatPopup component
-    send_update(SocialScribeWeb.ChatPopup,
-      id: "chat-popup",
-      chat_response: {conversation_id, result}
-    )
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_info({:chat_error, conversation_id, error}, socket) do
-    # Forward chat error to ChatPopup component
-    send_update(SocialScribeWeb.ChatPopup, id: "chat-popup", chat_error: {conversation_id, error})
-    {:noreply, socket}
-  end
-
   defp build_crm_credentials(user_id) do
     configured_adapter = Application.get_env(:social_scribe, :crm_api)
 
@@ -248,48 +255,6 @@ defmodule SocialScribeWeb.MeetingLive.Show do
         credential -> Map.put(acc, provider, credential)
       end
     end)
-  end
-
-  defp build_crm_entries(crm_credentials) do
-    Enum.map(crm_credentials, fn {provider, _credential} ->
-      %{
-        provider: provider,
-        label: Registry.provider_label(provider),
-        button_class: crm_button_class(provider)
-      }
-    end)
-  end
-
-  defp get_crm_entries_to_display(crm_credentials, meeting) do
-    case meeting.crm_provider do
-      nil ->
-        # No CRM associated - show all connected CRMs for selection
-        build_crm_entries(crm_credentials)
-
-      provider ->
-        # CRM is associated - show that CRM button, plus "Change CRM" option if multiple CRMs connected
-        associated_entry = [
-          %{
-            provider: provider,
-            label: Registry.provider_label(provider),
-            button_class: crm_button_class(provider)
-          }
-        ]
-
-        if map_size(crm_credentials) > 1 do
-          # Add "Change CRM" option
-          associated_entry ++
-            [
-              %{
-                provider: :change_crm,
-                label: "Change CRM",
-                button_class: "bg-muted text-muted-foreground hover:bg-muted/80"
-              }
-            ]
-        else
-          associated_entry
-        end
-    end
   end
 
   def crm_button_class("hubspot"), do: "bg-[#ff7a59] hover:bg-[#ff6a45] text-white"

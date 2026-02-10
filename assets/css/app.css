@@ -403,10 +403,12 @@ body {
    ========================================================================== */
 
 /* Contenteditable div placeholder */
-.mention-input:empty:before {
+.mention-input:empty:before,
+.mention-input[data-empty="true"]:before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
   pointer-events: none;
+  opacity: 0.4; /* 50% opacity */
 }
 
 /* Remove default outline from contenteditable */
@@ -420,11 +422,13 @@ body {
 
 /* Ensure placeholder shows correctly - handle both empty and whitespace-only content */
 .mention-input:empty:before,
+.mention-input[data-empty="true"]:before,
 .mention-input:has-br:not(:has(:not(br))):before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
   pointer-events: none;
   position: absolute;
+  opacity: 0.4; /* 50% opacity */
 }
 
 /* Hide zero-width spaces and empty text nodes for proper empty detection */

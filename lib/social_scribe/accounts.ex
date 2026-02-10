@@ -216,7 +216,22 @@ defmodule SocialScribe.Accounts do
 
   """
   def delete_user_credential(%UserCredential{} = user_credential) do
-    Repo.delete(user_credential)
+    provider = user_credential.provider
+
+    # Check if this is a CRM provider before deletion
+    is_crm_provider = provider in SocialScribe.Crm.Registry.crm_providers()
+
+    result = Repo.delete(user_credential)
+
+    # If CRM credential was deleted, clear orphaned references
+    if is_crm_provider && elem(result, 0) == :ok do
+      SocialScribe.Meetings.clear_crm_provider_for_user(
+        user_credential.user_id,
+        provider
+      )
+    end
+
+    result
   end
 
   @doc """
