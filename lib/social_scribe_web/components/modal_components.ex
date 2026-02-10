@@ -288,30 +288,36 @@ defmodule SocialScribeWeb.ModalComponents do
     ~H"""
     <div class="space-y-2">
       <div class="text-xs font-medium text-muted-foreground">{@field.label}</div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-start gap-3">
         <input
           type="checkbox"
           checked={@field.apply}
           name={"apply[#{@field_name}]"}
           id={"apply-#{@field_name}"}
           value="on"
-          class="h-4 w-4 rounded border-border text-primary focus:ring-primary flex-shrink-0"
+          class="h-4 w-4 rounded border-border text-primary focus:ring-primary flex-shrink-0 mt-3"
         />
-        <%!-- Current Value (read-only styled input) --%>
-        <div class="flex-1">
+        <%!-- Current Value (read-only) --%>
+        <div class="flex-1 space-y-1">
           <input
             type="text"
             value={@field.current_value || "No existing value"}
             disabled
             class="w-full px-3 py-2 text-sm bg-muted border border-input rounded-lg text-muted-foreground cursor-not-allowed line-through"
           />
+          <button
+            type="button"
+            class="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            Update mapping
+          </button>
         </div>
-        <%!-- Arrow Indicator --%>
-        <div class="flex-shrink-0 text-muted-foreground px-2">
+        <%!-- Arrow --%>
+        <div class="flex-shrink-0 text-muted-foreground px-2 pt-2">
           <span class="text-lg">→</span>
         </div>
-        <%!-- New Value (editable) --%>
-        <div class="flex-1">
+        <%!-- New Value (editable) + transcript time under it --%>
+        <div class="flex-1 space-y-1">
           <input
             type="text"
             name={"values[#{@field_name}]"}
@@ -320,21 +326,16 @@ defmodule SocialScribeWeb.ModalComponents do
             placeholder="Enter new value"
             class="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-colors"
           />
+          <%= if @field[:timestamp] do %>
+            <span class="block text-xs text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors">
+              Found in transcript ({@field[:timestamp]})
+            </span>
+          <% else %>
+            <span class="block text-xs text-muted-foreground">
+              Found in transcript (00:00)
+            </span>
+          <% end %>
         </div>
-      </div>
-      <%!-- Action Links --%>
-      <div class="flex items-center gap-4 pl-7">
-        <button
-          type="button"
-          class="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-        >
-          Update mapping
-        </button>
-        <%= if @field[:transcript_timestamp] do %>
-          <span class="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer transition-colors">
-            Found in transcript ({@field.transcript_timestamp})
-          </span>
-        <% end %>
       </div>
     </div>
     """

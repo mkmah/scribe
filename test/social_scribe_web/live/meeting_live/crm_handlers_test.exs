@@ -13,6 +13,8 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
   setup :verify_on_exit!
 
   setup do
+    Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)
+
     # Do NOT stub_with CrmApiMock -> Hubspot: that delegates to the real adapter,
     # which uses Tesla (HTTP) in the LiveView process where Tesla.Mock is not set.
     # Use explicit expect() in each test instead.
@@ -123,7 +125,7 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlersTest do
       Process.sleep(10)
       assert Process.alive?(view.pid)
 
-      Application.delete_env(:social_scribe, :crm_api)
+      Application.put_env(:social_scribe, :crm_api, SocialScribe.CrmApiMock)
     end
 
     test "uses Registry adapter when no config set", %{conn: conn} do
