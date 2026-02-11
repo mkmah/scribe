@@ -207,11 +207,12 @@ defmodule SocialScribe.AIContentGeneratorTest do
       assert {:ok, []} = AIContentGenerator.generate_hubspot_suggestions(meeting)
     end
 
-    test "returns empty list when LLM returns invalid JSON" do
+    test "returns error when LLM returns invalid JSON" do
       Application.put_env(:social_scribe, :llm_provider, TestLLMProviderInvalidJSON)
       meeting = meeting_with_transcript_and_participants()
 
-      assert {:ok, []} = AIContentGenerator.generate_hubspot_suggestions(meeting)
+      assert {:error, {:parsing_error, _}} =
+               AIContentGenerator.generate_hubspot_suggestions(meeting)
     end
 
     test "returns error when meeting has no participants" do

@@ -34,9 +34,20 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlers do
   end
 
   def handle_info({:crm_generate_suggestions, provider, contact, meeting, _credential}, socket) do
+    require Logger
+
+    Logger.debug(
+      "CrmHandlers: Generating suggestions for provider #{provider}, meeting #{meeting.id}, contact #{contact.id}"
+    )
+
     case CrmSuggestions.generate_from_meeting(meeting) do
       {:ok, suggestions} ->
+        Logger.debug(
+          "CrmHandlers: Generated #{length(suggestions)} suggestions, merging with contact"
+        )
+
         merged = CrmSuggestions.merge_with_contact(suggestions, contact)
+        Logger.debug("CrmHandlers: After merging, #{length(merged)} suggestions remain")
 
         send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
           id: "crm-modal-#{provider}",
@@ -46,6 +57,9 @@ defmodule SocialScribeWeb.MeetingLive.CrmHandlers do
         )
 
       {:error, reason} ->
+        Logger.error("CrmHandlers: Failed to generate suggestions: #{inspect(reason)}")
+        Logger.error("CrmHandlers: Provider: #{provider}, Meeting ID: #{meeting.id}")
+
         send_update(SocialScribeWeb.MeetingLive.CrmModalComponent,
           id: "crm-modal-#{provider}",
           error: "Failed to generate suggestions: #{inspect(reason)}",
