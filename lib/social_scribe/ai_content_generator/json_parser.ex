@@ -45,7 +45,10 @@ defmodule SocialScribe.AIContentGenerator.JsonParser do
 
         {:ok, parsed} ->
           # Valid JSON but not a list - means no suggestions found (empty result)
-          Logger.debug("JsonParser: Parsed JSON but result is not a list: #{inspect(parsed)}. Returning empty list.")
+          Logger.debug(
+            "JsonParser: Parsed JSON but result is not a list: #{inspect(parsed)}. Returning empty list."
+          )
+
           {:ok, []}
 
         {:error, jason_error} ->

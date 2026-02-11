@@ -59,24 +59,28 @@ defmodule SocialScribe.ErrorHandlerTest do
 
     test "formats api_error tuple with map body containing message key" do
       body = %{"message" => "Resource not found"}
+
       assert ErrorHandler.format_error({:error, {:api_error, 404, body}}) ==
                "API error: Resource not found (404)"
     end
 
     test "formats api_error tuple with map body containing error key" do
       body = %{"error" => "Unauthorized"}
+
       assert ErrorHandler.format_error({:error, {:api_error, 401, body}}) ==
                "API error: Unauthorized (401)"
     end
 
     test "formats api_error tuple with map body preferring message over error" do
       body = %{"message" => "Custom message", "error" => "Error text"}
+
       assert ErrorHandler.format_error({:error, {:api_error, 500, body}}) ==
                "API error: Custom message (500)"
     end
 
     test "formats api_error tuple with map body without message or error key" do
       body = %{"other" => "value"}
+
       assert ErrorHandler.format_error({:error, {:api_error, 500, body}}) ==
                "API error: Unknown API error (500)"
     end
@@ -93,6 +97,7 @@ defmodule SocialScribe.ErrorHandlerTest do
 
     test "formats http_error tuple with complex reason" do
       reason = {:econnrefused, "Connection refused"}
+
       assert ErrorHandler.format_error({:error, {:http_error, reason}}) ==
                "HTTP error: {:econnrefused, \"Connection refused\"}"
     end
@@ -114,6 +119,7 @@ defmodule SocialScribe.ErrorHandlerTest do
 
     test "formats nested token_refresh_failed tuple with deeply nested error" do
       nested = {:api_error, 401, "Unauthorized"}
+
       assert ErrorHandler.format_error({:error, {:token_refresh_failed, nested}}) ==
                "Failed to refresh token: API error: Unauthorized (401)"
     end
@@ -165,10 +171,10 @@ defmodule SocialScribe.ErrorHandlerTest do
 
     test "logs info level" do
       original_level = Logger.level()
-      
+
       try do
         Logger.configure(level: :info)
-        
+
         log =
           capture_log(fn ->
             assert ErrorHandler.log_and_format_error(:info, :network_error) ==
@@ -183,10 +189,10 @@ defmodule SocialScribe.ErrorHandlerTest do
 
     test "logs debug level for unknown level" do
       original_level = Logger.level()
-      
+
       try do
         Logger.configure(level: :debug)
-        
+
         log =
           capture_log(fn ->
             assert ErrorHandler.log_and_format_error(:debug, :bad_request) ==
@@ -230,6 +236,7 @@ defmodule SocialScribe.ErrorHandlerTest do
       log =
         capture_log(fn ->
           error = {:api_error, 500, "Internal Server Error"}
+
           assert ErrorHandler.log_and_format_error(:error, error, "API Call") ==
                    {:error, "API error: Internal Server Error (500)"}
         end)
@@ -241,6 +248,7 @@ defmodule SocialScribe.ErrorHandlerTest do
       log =
         capture_log(fn ->
           error = {:token_refresh_failed, :network_error}
+
           assert ErrorHandler.log_and_format_error(:warning, error, "OAuth") ==
                    {:error, "Failed to refresh token: Network error occurred"}
         end)
